@@ -1,0 +1,28 @@
+﻿<button class="interactable @(alwaysEnabled ? "always-enabled" : "") @styleClass"
+        disabled="@(!isEnabled)"
+        @onclick="OnClick">
+    @ChildContent
+</button>
+
+@code {
+
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public Action onClick { get; set; }
+    [Parameter] public Func<Task> onClickAsync { get; set; }
+    [Parameter] public string styleClass { get; set; }
+    [Parameter] public bool isEnabled { get; set; } = true;
+    [Parameter] public bool alwaysEnabled { get; set; }
+
+    async Task OnClick()
+    {
+        onClick?.Invoke();
+
+        if (onClickAsync is not null)
+        {
+            await App.Instance.IncreaseBusinessAsync(App.BusinessScope.Local);
+            await onClickAsync();
+            await App.Instance.DecreaseBusinessAsync(App.BusinessScope.Local);
+        }
+    }
+
+}

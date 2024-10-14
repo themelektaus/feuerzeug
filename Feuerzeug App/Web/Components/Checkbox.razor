@@ -1,0 +1,11 @@
+﻿<input id="@id" type="checkbox" class="interactable"
+       @bind:get="value"
+       @bind:set="valueChanged.InvokeAsync">
+
+@code {
+
+    [Parameter] public string id { get; set; }
+    [Parameter] public bool value { get; set; }
+    [Parameter] public EventCallback<bool> valueChanged { get; set; }
+
+}

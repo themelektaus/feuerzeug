@@ -1,0 +1,127 @@
+﻿@inherits PageWithSession
+
+<AssistantPage icon="img/ping.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Ping
+    </Title>
+    <Body>
+        <x-fill />
+        <div data-group="Target">
+            <div class="field">
+                <label>Hostname</label>
+                <Input @bind-value="ping.hostname" />
+            </div>
+        </div>
+        <div data-group="Command">
+            <div class="mono">@ping.ToScriptText()</div>
+        </div>
+        @if (output.Count > 0)
+        {
+            <div data-group="Output">
+                <div class="mono">
+                    @string.Join(Environment.NewLine, output)
+                </div>
+            </div>
+        }
+    </Body>
+    <Bottom>
+        <Button onClickAsync=@(() => Run(ping.ToScriptText())) styleClass="primary">
+            Run
+        </Button>
+        <Button onClickAsync="App.Instance.Cancel" isEnabled="busy" alwaysEnabled="true">
+            Cancel
+        </Button>
+        <Button onClick="ClearOutput" isEnabled="output.Count > 0" styleClass="negative">
+            Clear
+        </Button>
+    </Bottom>
+</AssistantPage>
+
+<style>
+    [data-group="Output"] {
+        flex: 1;
+        overflow: hidden;
+        padding-top: 1.2em !important;
+    }
+
+    [data-group="Output"]::before {
+        position: absolute;
+        margin-top: -2.2em !important;
+    }
+</style>
+
+@code {
+
+    public class Ping
+    {
+        public string hostname = string.Empty;
+
+        public string ToScriptText()
+        {
+            var scriptText = new List<string>();
+
+            scriptText.Add("ping");
+            scriptText.Add(hostname);
+
+            return string.Join(' ', scriptText);
+        }
+    }
+
+    readonly Ping ping = new();
+    readonly List<string> output = new();
+
+    bool busy;
+
+    protected override async Task OnInitAsync()
+    {
+        await base.OnInitAsync();
+
+        ping.hostname = "steinalt.online";
+    }
+
+    Task Run(string scriptText) => Run(
+        App.BusinessScope.Local,
+        async ct =>
+        {
+            busy = true;
+
+            ClearOutput();
+
+            session.OnData += OnData;
+            var result = await session.RunScriptAsync(scriptText, ct);
+            session.OnData -= OnData;
+
+            if (result.exception is not null)
+            {
+                Root.Instance.ShowException(result.exception);
+            }
+
+            busy = false;
+        },
+        async () =>
+        {
+            busy = false;
+            await Task.CompletedTask;
+        }
+    );
+
+    void OnData(PowerShellSession.Data data)
+    {
+        if (output.Count == 0 && data.Text == string.Empty)
+        {
+            return;
+        }
+
+        output.Add(data.Text);
+        this.RenderLater();
+    }
+
+    void ClearOutput()
+    {
+        output.Clear();
+        this.RenderLater();
+    }
+
+}

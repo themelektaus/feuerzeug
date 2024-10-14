@@ -1,0 +1,10 @@
+/.vs/
+
+/*/bin/
+/*/Build/
+/*/obj/
+
+*.css
+*.user
+
+!/*/Resources/**

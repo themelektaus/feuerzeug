@@ -1,0 +1,228 @@
+﻿@inherits PageWithSession
+
+<AssistantPage icon="img/gear.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Service Manager
+        <span>@session?.ToMarkupString()</span>
+    </Title>
+    <Body>
+        <x-fill />
+        <div class="table fixed">
+            <InputSearch @bind-value="searchText" />
+            <div class="table-section table-section-header">
+                <div>
+                    <div></div>
+                    <div>Name</div>
+                    <div>Title</div>
+                    <div>Start Type</div>
+                    <div>Status</div>
+                    <div></div>
+                </div>
+            </div>
+            <div class="table-section table-section-content">
+                @foreach (var service in GetServices())
+                {
+                    <div class="service">
+                        <div>
+                            @if (service.isStartable)
+                            {
+                                <Button onClickAsync="() => StartService(service)"
+                                        styleClass="positive icon icon-play"></Button>
+
+                            }
+                            else if (!service.isDisabled || service.isRunning)
+                            {
+                                <Button onClickAsync="() => StopService(service)"
+                                        styleClass="negative icon icon-stop"></Button>
+                            }
+                        </div>
+                        <div>@service.Name</div>
+                        <div>@service.DisplayName</div>
+                        <div data-start-type="@service.StartTypeString"></div>
+                        <div data-status="@service.StatusString"></div>
+                        <div>
+                            <Button onClick="() => { this.service = service; this.RenderLater(); }"
+                                    styleClass="icon icon-edit"></Button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </Body>
+</AssistantPage>
+
+@if (service is not null)
+{
+    <ServiceDetails service="service"
+                    onSetService="SetService"
+                    onClose="() => { service = null; this.RenderLater(); }" />
+}
+
+<style>
+    .table.fixed .table-section > div {
+        grid-template-columns: 2.5rem 2fr 3fr 1fr 1fr 2.5rem;
+    }
+
+    .table div:has(> button) {
+        display: flex;
+    }
+
+    .table button.icon {
+        background-position: center;
+        background-size: 1.075em;
+        background-repeat: no-repeat;
+        width: 1.75em;
+        height: 1.75em;
+        padding: 0;
+    }
+
+    .table button.icon-play { background-image: url(img/play.svg); }
+    .table button.icon-stop { background-image: url(img/stop.svg); }
+    .table button.icon-edit { background-image: url(img/edit.svg); }
+    .table div + div > button { background-color: #fff0; }
+    .table div + div > button:hover { background-color: var(--bg-color__alpha-1); }
+    .table div + div > button:active { background-color: var(--bg-color__alpha-2); }
+
+</style>
+
+@code {
+
+    List<Service> services;
+    Service service;
+
+    string searchText = string.Empty;
+
+    bool IsEnabled_Start(Service service)
+    {
+        return service.isStartable;
+    }
+
+    bool IsStartEnabled(Service service)
+    {
+        return !service.isDisabled && service.isStopped;
+    }
+
+    IEnumerable<Service> GetServices()
+    {
+        if (!searchText.IsValidPattern(out var ignoreCase))
+        {
+            return [];
+        }
+
+        return services.Where(x =>
+        {
+            if (x.Name.SearchMatch(searchText, ignoreCase))
+                return true;
+
+            if (x.DisplayName.SearchMatch(searchText, ignoreCase))
+                return true;
+
+            if (x.StartTypeString.SearchMatch(searchText, ignoreCase))
+                return true;
+
+            if (x.StatusString.SearchMatch(searchText, ignoreCase))
+                return true;
+
+            return false;
+        });
+    }
+
+    protected override async Task OnInitAsync()
+    {
+        await base.OnInitAsync();
+
+        var result = await session.RunScriptAsync("Get-Service");
+
+        services = new();
+
+        foreach (var x in result.returnValue)
+        {
+            try
+            {
+                if (session.HasSession)
+                {
+                    services.Add(Service.Remote.From(x));
+                }
+                else
+                {
+                    services.Add(Service.Local.From(x));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception(ex);
+            }
+        }
+    }
+
+    async Task StartService(Service service)
+    {
+        await session.RunScriptAsync(
+            scriptText: "param($service) Start-Service $service",
+            scriptOptions: new() { argumentList = [service.Object] }
+        );
+
+        await RefreshService(service);
+    }
+
+    async Task StopService(Service service)
+    {
+        await session.RunScriptAsync(
+            scriptText: "param($service) Stop-Service $service -Force",
+            scriptOptions: new()
+            {
+                argumentList = [service.Object]
+            }
+        );
+
+        await RefreshService(service);
+    }
+
+    async Task SetService(string startupType)
+    {
+        var script = new PowerShellSession.Script
+        {
+            text = "param($service, $startupType) Set-Service $service -StartupType $startupType",
+            options = new()
+            {
+                argumentList = [service.ToPowershellArgument(), startupType]
+            }
+        };
+
+        var result = await session.RunScriptAsync(script);
+
+        if (!result.HasErrors)
+        {
+            await RefreshService(service);
+        }
+    }
+
+    async Task RefreshService(Service service)
+    {
+        var script = new PowerShellSession.Script
+        {
+            text = "param($service) Get-Service $service",
+            options = new()
+            {
+                argumentList = [service.ToPowershellArgument()]
+            }
+        };
+
+        var serviceObject = await session.GetObjectAsync(script);
+
+        if (serviceObject is not null)
+        {
+            var name = serviceObject.Get<string>("Name");
+            var existingService = services.FirstOrDefault(x => x.Name == name);
+            if (existingService is not null)
+            {
+                existingService.SetObject(serviceObject);
+            }
+        }
+
+        this.RenderLater();
+    }
+
+}

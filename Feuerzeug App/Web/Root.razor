@@ -1,0 +1,169 @@
+﻿<div id="root-content" class="@GetStyleClass()">
+    <Menu />
+    <div id="overlay"></div>
+    @if (App.Instance.Update?.available ?? false)
+    {
+        <div class="update-available-message">
+            New version available<br />
+            <Button onClickAsync="App.Instance.PerformUpdate">Update</Button>
+        </div>
+    }
+    @if (page is not null)
+    {
+        <div data-page="@(page.Name.Substring(5))">
+            <DynamicComponent Type="page" @ref="pageComponent" />
+        </div>
+    }
+</div>
+
+@if (App.Instance.LogViewVisible)
+{
+    <LogView />
+}
+
+<Dialog @ref="messageDialog">
+    <Title>Message</Title>
+    <Content>
+        @message?.ToString()
+    </Content>
+    <Buttons>
+        <Button onClick="context.Hide">Close</Button>
+    </Buttons>
+</Dialog>
+
+<Dialog @ref="exceptionDialog">
+    <Title>Exception</Title>
+    <Content>
+        <div class="mono">
+            @exception?.ToString()
+        </div>
+    </Content>
+    <Buttons>
+        <Button onClick="context.Hide">Close</Button>
+    </Buttons>
+</Dialog>
+
+<Dialog @ref="selectionDialog">
+    <Title>@selectionDialogTitle</Title>
+    <Content>
+        @foreach (var item in selectionDialogItems)
+        {
+            <div @onclick="() => selectionDialogItem = item"
+                    class="item @(selectionDialogItem == item ? "active" : "")">
+                @item.text
+            </div>
+        }
+    </Content>
+    <Buttons>
+        <Button onClick="() => { selectionDialogOnSubmit.Invoke(selectionDialogItem.data); context.Hide(); }"
+                isEnabled="selectionDialogItem.data is not null"
+                styleClass="primary">Select</Button>
+        <Button onClick="() => { context.Hide(); }">Cancel</Button>
+    </Buttons>
+</Dialog>
+
+@using Directory = System.IO.Directory
+@using File = System.IO.File
+@using Path = System.IO.Path
+
+@code {
+
+    public static Root Instance { get; private set; }
+
+    string message;
+    Dialog messageDialog;
+
+    Exception exception;
+    Dialog exceptionDialog;
+
+    string selectionDialogTitle;
+    List<(string text, object data)> selectionDialogItems = new();
+    (string text, object data) selectionDialogItem;
+    Action<object> selectionDialogOnSubmit;
+    Dialog selectionDialog;
+
+    Type page = typeof(Page_Index);
+
+    DynamicComponent pageComponent;
+
+    string GetStyleClass()
+    {
+        if (App.Instance.IsBusyGlobally())
+        {
+            return $"disabled disabled-global";
+        }
+
+        if (App.Instance.IsBusyLocally())
+        {
+            return $"disabled disabled-local";
+        }
+
+        return string.Empty;
+    }
+
+    protected override void OnInitialized()
+    {
+        Instance = this;
+
+        App.Instance.mainForm.Activated += (_, _) => this.RenderLater();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            App.Instance.mainForm.OnAfterFirstRender();
+        }
+    }
+
+    public async Task GotoAsync(Type page)
+    {
+        this.page = page;
+
+        await this.RenderLaterAsync();
+    }
+
+    public void Refresh()
+    {
+        foreach (var menu in Menu.Instances)
+        {
+            menu.RenderLater();
+        }
+
+        var page = pageComponent?.Instance as ComponentBase;
+
+        if (page is not null)
+        {
+            page.RenderLater();
+        }
+
+        this.RenderLater();
+    }
+
+    public void ShowMessage(string message)
+    {
+        this.message = message;
+        messageDialog.Show();
+    }
+
+    public void ShowException(Exception exception)
+    {
+        this.exception = exception;
+        exceptionDialog.Show();
+    }
+
+    public void ShowSelection(
+        string title,
+        object data,
+        List<(string text, object data)> items,
+        Action<object> onSubmit
+    )
+    {
+        selectionDialogTitle = title;
+        selectionDialogItems = items;
+        selectionDialogItem = selectionDialogItems.FirstOrDefault(x => object.Equals(x.data, data));
+        selectionDialogOnSubmit = onSubmit;
+        selectionDialog.Show();
+    }
+
+}

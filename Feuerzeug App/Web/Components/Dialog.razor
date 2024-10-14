@@ -1,0 +1,30 @@
+﻿<div class="dialog-container">
+    @if (visible) { <x-overlay /> }
+    <div class="dialog @(visible ? "visible" : "")">
+        <div class="dialog-title">@Title</div>
+        <div class="dialog-content">@Content</div>
+        <div class="dialog-buttons">@Buttons(this)</div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter] public RenderFragment Title { get; set; }
+    [Parameter] public RenderFragment Content { get; set; }
+    [Parameter] public RenderFragment<Dialog> Buttons { get; set; }
+
+    bool visible;
+
+    public void Show()
+    {
+        visible = true;
+        this.RenderLater();
+    }
+
+    public void Hide()
+    {
+        visible = false;
+        this.RenderLater();
+    }
+
+}

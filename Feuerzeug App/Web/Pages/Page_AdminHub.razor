@@ -1,0 +1,246 @@
+﻿@inherits Page
+
+<AssistantPage icon="img/tools.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Admin Hub
+    </Title>
+    <Body>
+        <h2>Windows</h2>
+        <ul>
+            <li class="link" @onclick="Open_1">Computerverwaltung</li>
+            <li class="link" @onclick="Open_2">Eingabeaufforderung</li>
+            <li class="link" @onclick="Open_3">Geräte und Drucker</li>
+            <li class="link" @onclick="Open_4">Netzwerkadapter</li>
+            <li class="link" @onclick="Open_5">Programme und Funktionen</li>
+            <li class="link" @onclick="Open_6">Systemeigenschaften</li>
+            <li class="link" @onclick="Open_7">Windows-Firewall mit erweiterter Sicherheit</li>
+        </ul>
+        <h2 style="margin-bottom: .5em; ">Third-party Tools</h2>
+        <div class="app">
+            <div class="name">
+                Feuerzeug Service
+            </div>
+
+            @if (FeuerzeugService.IsInstalled())
+            {
+                @if (FeuerzeugService.IsRunning())
+                {
+                    <div class="status running">Running</div>
+                    <Button styleClass="negative" onClickAsync="FeuerzeugService_Stop">Stop</Button>
+                    <Button styleClass="primary" onClick="FeuerzeugService_Open">Open</Button>
+                }
+                else
+                {
+                    <div class="status stopped">Stopped</div>
+                    <Button styleClass="positive" onClickAsync="FeuerzeugService_Start">Start</Button>
+                    <Button styleClass="negative" onClickAsync="FeuerzeugService_Uninstall">Uninstall</Button>
+                }
+            }
+            else
+            {
+                <div class="status">&nbsp;</div>
+                <Button styleClass="primary" onClickAsync="FeuerzeugService_Install">Install</Button>
+            }
+
+        </div>
+        <div class="app">
+            <div class="name">
+                <b>US</b>er
+            </div>
+
+            @if (USer_IsRunning())
+            {
+                <div class="status running">Running</div>
+                <Button styleClass="negative" onClickAsync="USer_Stop">Stop</Button>
+            }
+            else
+            {
+                <div class="status stopped">Stopped</div>
+                <Button styleClass="positive" onClickAsync="USer_Start">Start</Button>
+            }
+        </div>
+    </Body>
+</AssistantPage>
+
+<style>
+    .assistant-page-body-inner-content {
+        margin: 0 3.5em;
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        align-items: flex-start;
+        height: fit-content;
+        padding-bottom: 2em;
+    }
+
+    h2 {
+        margin-top: 1.25em;
+    }
+
+    [data-page] ul {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5em;
+        padding: 1em 1.5em 0;
+    }
+
+    .app {
+        display: flex;
+        align-items: center;
+        gap: .5em;
+        border-radius: 3em;
+        background-color: var(--bg-color__input);
+        padding: .825em;
+    }
+
+    .app .name {
+        width: 10em;
+        margin-left: .75em;
+    }
+
+    .app .status {
+        width: 5em;
+    }
+
+    .app .status.running {
+        color: #6c6;
+    }
+
+    .app .status.stopped {
+        color: #999;
+    }
+</style>
+
+@using System.ServiceProcess
+
+@using Process = System.Diagnostics.Process
+@using ProcessStartInfo = System.Diagnostics.ProcessStartInfo
+@using Path = System.IO.Path
+
+@code {
+
+    static void Open_1()
+    {
+        Utils.Open("compmgmt.msc");
+    }
+
+    static void Open_2()
+    {
+        Utils.Open("cmd");
+    }
+
+    static void Open_3()
+    {
+        Utils.Open("control", "/name Microsoft.DevicesAndPrinters");
+    }
+
+    static void Open_4()
+    {
+        Utils.Open("ncpa.cpl");
+    }
+
+    static void Open_5()
+    {
+        Utils.Open("appwiz.cpl");
+    }
+
+    static void Open_6()
+    {
+        Utils.Open("control", "sysdm.cpl");
+    }
+
+    static void Open_7()
+    {
+        Utils.Open("wf.msc");
+    }
+
+    public static string GetFeuerzeugServicePath()
+    {
+#if DEBUG
+        var current = new System.IO.DirectoryInfo(Environment.CurrentDirectory);
+        do
+        {
+            if (System.IO.File.Exists(Path.Combine(current.FullName, "Feuerzeug.sln")))
+            {
+                return Path.Combine(
+                    current.FullName,
+                    "Feuerzeug Service",
+                    "bin",
+                    "Debug",
+                    "net8.0-windows",
+                    "Feuerzeug Service.exe"
+                );
+            }
+            current = current.Parent;
+        }
+        while (current is not null);
+
+        return null;
+#else
+        return Path.Combine("Service", "Feuerzeug Service.exe");
+#endif
+    }
+
+    async Task FeuerzeugService_Install()
+    {
+        await Process.Start(GetFeuerzeugServicePath(), "install")
+            .WaitForExitAsync();
+        this.RenderLater();
+    }
+
+    async Task FeuerzeugService_Uninstall()
+    {
+        await Process.Start(GetFeuerzeugServicePath(), "uninstall")
+            .WaitForExitAsync();
+        this.RenderLater();
+    }
+
+    static void FeuerzeugService_Open()
+    {
+        Process.Start(new ProcessStartInfo("http://localhost:5180") { UseShellExecute = true });
+    }
+
+    async Task FeuerzeugService_Start()
+    {
+        await FeuerzeugService.StartAsync();
+        this.RenderLater();
+    }
+
+    async Task FeuerzeugService_Stop()
+    {
+        await FeuerzeugService.StopAsync();
+        this.RenderLater();
+    }
+
+    static bool USer_IsRunning()
+    {
+        return Process.GetProcessesByName("USer").Length > 0;
+    }
+
+    async Task USer_Start()
+    {
+        await USer_Stop();
+
+        Utils.Open(Path.Combine("Resources", "USer.exe"), createNoWindow: true);
+
+        await Utils.WaitForAsync(() => USer_IsRunning(), TimeSpan.FromSeconds(10));
+
+        this.RenderLater();
+    }
+
+    async Task USer_Stop()
+    {
+        foreach (var process in Process.GetProcessesByName("USer"))
+        {
+            process.Kill();
+            process.WaitForExit();
+        }
+
+        await Utils.WaitForAsync(() => !USer_IsRunning(), TimeSpan.FromSeconds(10));
+
+        this.RenderLater();
+    }
+
+}

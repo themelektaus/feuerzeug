@@ -1,0 +1,231 @@
+﻿@inherits PageWithSession
+
+<AssistantPage icon="img/robo.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Robocopy
+    </Title>
+    <Body>
+        <x-fill />
+        <div data-group="Path">
+            <div class="field">
+                <label>Source</label>
+                <input class="browse interactable" value="@robocopy.source" readonly
+                       @onclick="BrowseSource" />
+            </div>
+            <div class="field">
+                <label>Destination</label>
+                <input class="browse interactable" value="@robocopy.destination" readonly
+                       @onclick="BrowseDestination" />
+            </div>
+        </div>
+        <div data-group="Options">
+            <div>
+                <div>
+                    <div class="field">
+                        <Checkbox id="robocopy-mirror" @bind-value="robocopy.mirror" />
+                        <label for="robocopy-mirror">Mirror</label>
+                    </div>
+                    <div class="field">
+                        <Checkbox id="robocopy-include-permissions" @bind-value="robocopy.includePermissions" />
+                        <label for="robocopy-include-permissions">Include Permissions</label>
+                    </div>
+                </div>
+                <div>
+                    <div class="field">
+                        <Checkbox id="robocopy-backup-mode" @bind-value="robocopy.backupMode" />
+                        <label for="robocopy-backup-mode">Backup Mode</label>
+                    </div>
+                    <div class="field">
+                        <Checkbox id="robocopy-copy-encrypted-files" @bind-value="robocopy.copyEncryptedFiles" />
+                        <label for="robocopy-copy-encrypted-files">Copy Encrypted Files</label>
+                    </div>
+                </div>
+                <div>
+                    <div class="field">
+                        <Checkbox id="robocopy-ignore-junction" @bind-value="robocopy.ignoreJunction" />
+                        <label for="robocopy-ignore-junction">Ignore Junction</label>
+                    </div>
+                    <div class="field">
+                        <Checkbox id="robocopy-ignore-older-files" @bind-value="robocopy.ignoreOlderFiles" />
+                        <label for="robocopy-ignore-older-files">Ignore Older Files</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div data-group="Command">
+            <div class="mono">@robocopy.ToScriptText(simulate: false)</div>
+        </div>
+        @if (output.Count > 0)
+        {
+            <div data-group="Output">
+                <div class="mono">
+                    @string.Join(Environment.NewLine, output)
+                </div>
+            </div>
+        }
+    </Body>
+    <Bottom>
+        <Button onClickAsync=@(() => Run(robocopy.ToScriptText(simulate: true)))>
+            Simulate
+        </Button>
+        <Button onClickAsync=@(() => Run(robocopy.ToScriptText(simulate: false))) styleClass="primary">
+            Run
+        </Button>
+        <Button onClickAsync="App.Instance.Cancel" isEnabled="busy" alwaysEnabled="true">
+            Cancel
+        </Button>
+        <Button onClick="ClearOutput" isEnabled="output.Count > 0" styleClass="negative">
+            Clear
+        </Button>
+    </Bottom>
+</AssistantPage>
+
+<style>
+    [data-group="Output"] {
+        flex: 1;
+        overflow: hidden;
+        padding-top: 1.2em !important;
+    }
+
+    [data-group="Output"]::before {
+        position: absolute;
+        margin-top: -2.2em !important;
+    }
+
+    [data-group="Options"] > div {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    [data-group="Options"] > div > div {
+        display: flex;
+        flex-direction: column;
+        gap: .25em;
+        padding-block: .5em;
+        margin-right: 3em;
+    }
+
+    [data-group="Options"] > div > div:last-child {
+        margin-right: 0;
+    }
+</style>
+
+@code {
+
+    public class Robocopy
+    {
+        public string source = string.Empty;
+        public string destination = string.Empty;
+        public bool mirror;
+        public bool backupMode;
+        public bool copyEncryptedFiles;
+        public bool ignoreJunction;
+        public bool ignoreOlderFiles;
+        public bool includePermissions;
+
+        public string ToScriptText(bool simulate)
+        {
+            var scriptText = new List<string>();
+
+            scriptText.Add("robocopy");
+
+            scriptText.Add($"\"{source}\"");
+            scriptText.Add($"\"{destination}\"");
+            scriptText.Add(mirror ? "/mir" : "/e");
+            scriptText.Add("/r:0 /w:0 /tee /dst /np");
+
+            if (backupMode) scriptText.Add("/b");
+            if (copyEncryptedFiles) scriptText.Add("/efsraw");
+            if (ignoreJunction) scriptText.Add("/xjd /xjf");
+            if (ignoreOlderFiles) scriptText.Add("/xo");
+            if (includePermissions) scriptText.Add("/copyall");
+
+            if (simulate) scriptText.Add("/l");
+
+            return string.Join(' ', scriptText);
+        }
+    }
+
+    readonly Robocopy robocopy = new();
+    readonly List<string> output = new();
+
+    bool busy;
+
+    Task BrowseSource() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var source = await App.ShowOpenFolderDialog(robocopy.source);
+            if (source is null)
+            {
+                return;
+            }
+
+            robocopy.source = source;
+
+            this.RenderLater();
+        }
+    );
+
+    Task BrowseDestination() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var destination = await App.ShowOpenFolderDialog(robocopy.destination);
+            if (destination is null)
+            {
+                return;
+            }
+
+            robocopy.destination = destination;
+
+            this.RenderLater();
+        }
+    );
+
+    Task Run(string scriptText) => Run(
+        App.BusinessScope.Local,
+        async ct =>
+        {
+            busy = true;
+
+            ClearOutput();
+
+            session.OnData += OnData;
+            var result = await session.RunScriptAsync(scriptText, ct);
+            session.OnData -= OnData;
+
+            if (result.exception is not null)
+            {
+                Root.Instance.ShowException(result.exception);
+            }
+
+            busy = false;
+        },
+        async () =>
+        {
+            busy = false;
+            await Task.CompletedTask;
+        }
+    );
+
+    void OnData(PowerShellSession.Data data)
+    {
+        if (output.Count == 0 && data.Text == string.Empty)
+        {
+            return;
+        }
+
+        output.Add(data.Text);
+        this.RenderLater();
+    }
+
+    void ClearOutput()
+    {
+        output.Clear();
+        this.RenderLater();
+    }
+
+}

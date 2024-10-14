@@ -1,0 +1,234 @@
+﻿@inherits Page
+
+<AssistantPage isLoading="!isInitialized">
+    <Body>
+        <div class="icon"></div>
+        <div class="content">
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/tools.svg); "></div>
+                    Admin Hub
+                </h2>
+                <p>
+                    The Admin Hub is a centralized interface that provides a
+                    collection of shortcuts to various built-in Windows
+                    administrative tools. With just one click, you can quickly
+                    access essential tools like Computer Management,
+                    Event Viewer, Command Prompt, and many others.
+                </p>
+                <Button onClickAsync="GotoAsync<Page_AdminHub>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/gear.svg); "></div>
+                    Service Manager
+                </h2>
+                <p>
+                    A versatile tool for managing Windows services, allowing
+                    you to effortlessly control your system services. With an
+                    integrated search bar, you can quickly find the service you
+                    need and start or stop with a single click.
+                </p>
+                <Button onClickAsync="GotoAsync<Page_ServiceManager>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/rename.svg); "></div>
+                    Rename Helper
+                </h2>
+                <p>
+                    This helper is a powerful and user-friendly tool that helps
+                    you quickly and efficiently rename files in a selected
+                    folder. With an intuitive interface, it allows you to
+                    change file names to suit your needs in no time. It is an
+                    essential tool for anyone working with large volumes of
+                    files.
+                </p>
+                <Button onClickAsync="GotoAsync<Page_RenameHelper>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/robo.svg); "></div>
+                    Robocopy
+                </h2>
+                <p>
+                    User-friendly tool with a graphical interface that brings
+                    the powerful capabilities of Robocopy into an intuitive and
+                    easy-to-use format. With it you can easily configure
+                    complex file transfer tasks and directory synchronizations
+                    without the need to input complicated command-line
+                    instructions.
+                </p>
+                <Button onClickAsync="GotoAsync<Page_Robocopy>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/foldersync.svg); "></div>
+                    Folder Sync
+                </h2>
+                <p>
+                    A powerful tool designed to compare files between two
+                    folders and list all differences. It allows you to easily
+                    identify and analyze discrepancies, such as missing,
+                    modified, or additional files. With options to synchronize
+                    the folders by copying, updating, or deleting files as
+                    needed.
+                </p>
+                <Button onClickAsync="GotoAsync<Page_FolderSync>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/ping.svg); "></div>
+                    Ping
+                </h2>
+                <p>
+                    &nbsp;
+                </p>
+                <Button onClickAsync="GotoAsync<Page_Ping>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/unity.svg); "></div>
+                    Unity WebGL Page Creator
+                </h2>
+                <p>
+                    &nbsp;
+                </p>
+                <Button onClickAsync="GotoAsync<Page_UnityWebGlPageCreator>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+            <div class="item" data-click-child-button>
+                <h2>
+                    <div style="background-image: url(img/download.svg); "></div>
+                    Update
+                </h2>
+                <p>
+                    &nbsp;
+                </p>
+                <Button onClickAsync="GotoAsync<Page_Update>"
+                        styleClass="primary">
+                    Start
+                </Button>
+            </div>
+        </div>
+    </Body>
+</AssistantPage>
+
+<style>
+    .assistant-page-body-content {
+        padding-inline: 0;
+    }
+
+    .assistant-page-body-inner-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #root:has(.update-available-message) .assistant-page-body-inner-content {
+        padding-top: 1em;
+    }
+
+    .icon {
+        width: 96px;
+        height: 96px;
+        flex: 0 0 96px;
+        margin-inline: auto;
+        background: url(img/icon.svg) no-repeat;
+        background-size: contain;
+    }
+
+    .content {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.5em;
+        padding: 1em 1em 3.5em;
+        box-sizing: border-box;
+        margin: auto;
+    }
+
+    .item {
+        display: flex;
+        flex-direction: column;
+        gap: .75em;
+        width: min(25em, 100%);
+        backdrop-filter: brightness(.1) contrast(.6) blur(.2em);
+        background-color: #3333;
+        border-radius: .5em;
+        overflow: hidden;
+        padding: 1em 1.5em 1.5em;
+        cursor: pointer;
+        filter: brightness(.95);
+    }
+
+    .item:hover {
+        outline: .125em solid #6cc;
+        filter: brightness(1.05);
+    }
+
+    .item:active {
+        filter: brightness(1.125);
+    }
+
+    .title {
+        display: flex;
+        gap: 1em;
+    }
+
+    .item h2 {
+        margin: .25em 0 0;
+        display: flex;
+        gap: .375em;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .item h2 div {
+        width: 1.125em;
+        height: 1.125em;
+        background-size: contain;
+    }
+
+    .item p {
+        margin: 0;
+        overflow: auto;
+        flex-basis: 9em;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .item button {
+        margin: auto;
+        padding-inline: 1.125em;
+    }
+
+    .item button.hidden {
+        visibility: hidden;
+    }
+</style>

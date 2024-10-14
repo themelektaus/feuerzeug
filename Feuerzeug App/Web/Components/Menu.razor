@@ -1,0 +1,69 @@
+﻿<div id="menu">
+    <ul>
+        <li class="menu-root-item">
+            File
+            <ul>
+                <MenuItem onClick="App.Instance.mainForm.Dispose">
+                    Quit App
+                </MenuItem>
+            </ul>
+        </li>
+        <li class="menu-root-item">
+            View
+            <ul>
+                <MenuItem onClickAsync="App.Instance.ToggleLogViewAsync" alwaysEnabled="true">
+                    @(App.Instance.LogViewVisible ? "Hide Log" : "Show Log")
+                </MenuItem>
+                <MenuItem onClick="App.Instance.mainForm.ResetWindow" alwaysEnabled="true">
+                    Reset Window
+                </MenuItem>
+            </ul>
+        </li>
+        @if (pages.Count > 0)
+        {
+            <li class="menu-root-item">
+                Debug
+                <ul>
+                    @foreach (var page in pages)
+                    {
+                        <MenuItem onClickAsync="() => Root.Instance.GotoAsync(page)">
+                            <span style="opacity:.5;pointer-events:none">
+                                Goto
+                            </span>
+                            @(page.Name.Substring(5))
+                        </MenuItem>
+                    }
+                </ul>
+            </li>
+        }
+    </ul>
+</div>
+
+@implements IDisposable
+
+@code {
+
+    public static List<Menu> Instances { get; } = new();
+
+    readonly List<Type> pages = new();
+
+    protected override void OnInitialized()
+    {
+        Instances.Add(this);
+
+#if DEBUG
+        var pageType = typeof(Page);
+        pages.AddRange(
+            pageType.Assembly
+                .GetTypes()
+                .Where(x => !x.IsAbstract)
+                .Where(pageType.IsAssignableFrom)
+        );
+#endif
+    }
+
+    public void Dispose()
+    {
+        Instances.Remove(this);
+    }
+}

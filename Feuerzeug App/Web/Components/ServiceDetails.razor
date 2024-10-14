@@ -1,0 +1,93 @@
+﻿
+<div class="service-details" @onclick="onClose">
+    <x-overlay />
+    <div class="service @(initialized ? "initialized" : "")" @onclick:stopPropagation="true">
+        <div class="service-display-name">@service.DisplayName</div>
+        <div style="margin-top: .5em; ">Start Type</div>
+        <div class="service-start-type">
+            @foreach (var startType in new[] {
+                new[] { "Automatic", "primary" },
+                new[] { "Manual", "primary" },
+                new[] { "Disabled", "" }
+            })
+            {
+                var active = service.StartTypeString == startType[0];
+                <Button styleClass="@(startType[1] + " " + (active ? "active" : ""))"
+                        onClickAsync=@(active ? (Func<Task>) null : () => OnSetService(startType[0]))>
+                    @startType[0]
+                </Button>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .service-details {
+        z-index: 1;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 3em;
+    }
+
+    .service-details .service {
+        background-color: var(--bg-color__group-title);
+        max-width: 100%;
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow: hidden;
+        box-shadow: 0 0 3em -1em #000;
+        padding: .75em;
+        gap: .5em;
+        translate: 0 -1em;
+        opacity: 0;
+        transition: .15s;
+    }
+
+    .service-details .service.initialized {
+        translate: 0 0;
+        opacity: 1;
+    }
+
+    .service-details .service-start-type {
+        display: flex;
+        gap: .5em;
+        padding-block: .5em;
+    }
+
+    .service-details button.active {
+        outline: .125em solid #fffb;
+        filter: none !important;
+        cursor: unset;
+    }
+</style>
+
+@code {
+
+    [Parameter] public Service service { get; set; }
+    [Parameter] public Func<string, Task> onSetService { get; set; }
+    [Parameter] public Action onClose { get; set; }
+
+    bool initialized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(100);
+        initialized = true;
+        StateHasChanged();
+    }
+
+    async Task OnSetService(string startupType)
+    {
+        await onSetService(startupType);
+        this.RenderLater();
+    }
+
+}

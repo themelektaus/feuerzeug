@@ -1,0 +1,56 @@
+﻿@inherits Page
+
+<AssistantPage icon="img/download.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Update
+    </Title>
+    <Body>
+        <div data-group="Information">
+            <div class="field">
+                <label>Local Version</label>
+                <input readonly value=@AppInfo.version>
+            </div>
+            <div class="field">
+                <label>Remote Version</label>
+                @if (app.Update is null)
+                {
+                    <input readonly value="-">
+                }
+                else
+                {
+                    <input readonly value=@app.Update.remoteVersion.ToString()>
+                }
+            </div>
+        </div>
+        @if (app.Update is not null)
+        {
+            <div style="display: flex; justify-content: center; gap: .5em; margin-top: .5em; ">
+                <Button onClickAsync="app.CheckForUpdates">Check</Button>
+                <Button onClickAsync="app.PerformUpdate"
+                        styleClass=@(app.Update.available ? "primary" : "negative")>
+                    @(app.Update.available ? "Update" : "Force Update")
+                </Button>
+            </div>
+        }
+    </Body>
+</AssistantPage>
+
+@implements IDisposable
+
+@code {
+
+    protected override async Task OnInitAsync()
+    {
+        await base.OnInitAsync();
+
+
+    }
+
+    public void Dispose()
+    {
+        
+    }
+
+}

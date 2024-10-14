@@ -1,0 +1,197 @@
+﻿@inherits Page
+
+<AssistantPage icon="img/rename.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Rename Helper
+    </Title>
+    <Body>
+        <x-fill />
+        <div data-group="Folder">
+            <input class="browse interactable" value="@folder" readonly @onclick="Browse" />
+        </div>
+        <div data-group="Files">
+            <div class="table fixed">
+                <InputSearch @bind-value="searchText" />
+                <div class="table-section table-section-header">
+                    <div>
+                        <div>Old Name</div>
+                        <div>New Name</div>
+                    </div>
+                </div>
+                <div class="table-section table-section-content">
+                    @foreach (var file in GetFiles())
+                    {
+                        <div class="@("file" + (file.IsDirty ? " dirty" : ""))">
+                            <div>@file.OldName</div>
+                            <input class="interactable"
+                                   value="@file.NewName"
+                                   @oninput="e => file.NewName = e.Value.ToString()" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </Body>
+    <Bottom>
+        <Button onClickAsync="Rename" isEnabled="files.Any(x => x.IsDirty)">
+            Rename
+        </Button>
+    </Bottom>
+</AssistantPage>
+
+<style>
+    [data-group="Files"] {
+        flex: 1;
+        overflow: hidden;
+        padding-top: 1.5em !important;
+    }
+
+    [data-group="Files"]::before {
+        position: absolute;
+        margin-top: -2.625em !important;
+    }
+
+    .table.fixed .table-section > div {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .table.fixed .table-section-content input {
+        padding: .25em .675em;
+        width: calc(100% - 1.5em);
+        margin: .25em 0 .25em 0;
+    }
+
+    .table.fixed .table-section-content .dirty,
+    .table.fixed .table-section-content .dirty input {
+        background-color: #c606;
+    }
+</style>
+
+@code {
+
+    class File
+    {
+        public string Folder { get; set; }
+        public string OldName { get; set; }
+        public string NewName { get; set; }
+
+        public bool IsDirty => !string.Equals(OldName, NewName, StringComparison.InvariantCultureIgnoreCase);
+
+        public File(System.IO.FileInfo info)
+        {
+            Folder = info.DirectoryName;
+            OldName = info.Name;
+            NewName = info.Name;
+        }
+    }
+
+    string folder = string.Empty;
+    string searchText = string.Empty;
+
+    readonly List<File> files = new();
+
+    IEnumerable<File> GetFiles()
+    {
+        if (!searchText.IsValidPattern(out var ignoreCase))
+        {
+            return [];
+        }
+
+        return files.Where(x =>
+        {
+            if (x.IsDirty)
+                return true;
+
+            if (x.OldName.SearchMatch(searchText, ignoreCase))
+                return true;
+
+            if (x.NewName.SearchMatch(searchText, ignoreCase))
+                return true;
+
+            return false;
+        });
+    }
+
+    protected override async Task OnInitAsync()
+    {
+        await base.OnInitAsync();
+
+        this.folder = Environment.CurrentDirectory;
+        await RefreshFilesAsync();
+    }
+
+    Task Browse() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var folder = await App.ShowOpenFolderDialog(this.folder);
+            if (folder is null)
+            {
+                return;
+            }
+
+            this.folder = folder;
+            await RefreshFilesAsync();
+
+            this.RenderLater();
+        }
+    );
+
+    async Task RefreshFilesAsync()
+    {
+        await Task.Run(() =>
+        {
+            files.Clear();
+        });
+
+        if (folder == string.Empty)
+        {
+            return;
+        }
+
+        var directory = await Task.Run(() =>
+        {
+            var directory = new System.IO.DirectoryInfo(folder);
+            return directory.Exists ? directory : null;
+        });
+
+        if (directory is null)
+        {
+            return;
+        }
+
+        await Task.Run(() =>
+        {
+            foreach (var file in directory.EnumerateFiles())
+            {
+                files.Add(new(file));
+            }
+        });
+    }
+
+    Task Rename() => Run(
+        App.BusinessScope.Global,
+        async () =>
+        {
+            foreach (var file in files.Where(x => x.IsDirty))
+            {
+                await Task.Run(() =>
+                {
+                    var source = System.IO.Path.Combine(file.Folder, file.OldName);
+                    var destination = System.IO.Path.Combine(file.Folder, file.NewName);
+                    try
+                    {
+                        System.IO.File.Move(source, destination);
+                        file.OldName = file.NewName;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Exception(ex);
+                    }
+                });
+            }
+        }
+    );
+}

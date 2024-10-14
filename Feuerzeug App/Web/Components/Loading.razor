@@ -1,0 +1,33 @@
+﻿<div class="loading @(isVisible ? "visible" : "")">
+    <div style="@innerStyle">
+        @if (text is not null)
+        {
+            @if (text == string.Empty)
+            {
+                <div>&nbsp;</div>
+            }
+            else
+            {
+                <div>@text</div>
+            }
+        }
+        @if (onCancelAsync is not null)
+        {
+            <Button onClickAsync="onCancelAsync" alwaysEnabled="true">
+                Cancel
+            </Button>
+        }
+    </div>
+</div>
+
+@code {
+
+    [Parameter] public bool isVisible { get; set; }
+    [Parameter] public string text { get; set; }
+    [Parameter] public Func<Task> onCancelAsync { get; set; }
+
+    string innerStyle => text is not null || onCancelAsync is not null
+        ? "margin-top: calc(50vh - 1.75em); display: flex; flex-direction: column; gap: .75em; align-items: center; "
+        : "translate: -.25em 0; ";
+
+}

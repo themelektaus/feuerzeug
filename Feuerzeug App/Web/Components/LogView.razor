@@ -1,0 +1,46 @@
+﻿<div @ref="logView" class="log-view">
+    @foreach (var entry in Logger.GetEntries())
+    {
+        <div class="log-view-entry">
+            <div class="log-view-entry-time">@entry.time</div>
+            <div class="log-view-entry-type log-view-entry-type-@entry.type">@entry.type</div>
+            <div class="log-view-entry-message">
+                @(new MarkupString(entry.message.ReplaceLineEndings("<br>")))
+            </div>
+        </div>
+    }
+</div>
+
+@implements IDisposable
+
+@inject IJSRuntime javascript;
+
+@code {
+
+    public static List<LogView> Instances { get; } = new();
+
+    ElementReference logView;
+
+    protected override void OnInitialized()
+    {
+        Instances.Add(this);
+        Logger.OnUpdate += Logger_OnUpdate;
+    }
+
+    public void Dispose()
+    {
+        Instances.Remove(this);
+        Logger.OnUpdate -= Logger_OnUpdate;
+    }
+
+    void Logger_OnUpdate(string type, string message)
+    {
+        Task.Run(this.RenderLaterAsync);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await javascript.InvokeVoidAsync("scrollDown", logView);
+    }
+
+}

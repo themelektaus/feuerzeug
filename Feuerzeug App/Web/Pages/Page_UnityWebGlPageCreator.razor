@@ -1,0 +1,378 @@
+﻿@inherits Page
+
+<AssistantPage icon="img/unity.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Unity WebGL Page Creator
+    </Title>
+    <Body>
+        <div class="field">
+            <label>Web Build</label>
+            <input class="browse interactable" value="@webBuildDirectory" readonly
+                   @onclick="Browse" />
+        </div>
+        <div class="field">
+            <label>Loader</label>
+            <input class="browse interactable" value="@loaderUrl" readonly
+                   @onclick="() => SelectFile(loaderUrl, x => loaderUrl = x, FILE_EXT__LOADER)" />
+        </div>
+        <div class="field">
+            <label>Data</label>
+            <input class="browse interactable" value="@dataUrl" readonly
+                   @onclick="() => SelectFile(dataUrl, x => dataUrl = x, FILE_EXT__DATA)" />
+        </div>
+        <div class="field">
+            <label>Framework</label>
+            <input class="browse interactable" value="@frameworkUrl" readonly
+                   @onclick="() => SelectFile(frameworkUrl, x => frameworkUrl = x, FILE_EXT__FRAMEWORK)" />
+        </div>
+        <div class="field">
+            <label>Code</label>
+            <input class="browse interactable" value="@codeUrl" readonly
+                   @onclick="() => SelectFile(codeUrl, x => codeUrl = x, FILE_EXT__CODE)" />
+        </div>
+        <div class="field">
+            <label>Streaming Assets</label>
+            <input class="browse interactable" value="@(streamingAssetsUrl == string.Empty ? "(None)" : streamingAssetsUrl)" readonly
+                   @onclick="() => SelectFolder(streamingAssetsUrl, x => streamingAssetsUrl = x)" />
+        </div>
+        <div class="field">
+            <label>Theme</label>
+            <input class="browse interactable" value="@(theme == string.Empty ? "(None)" : theme)" readonly
+                   @onclick="() => SelectTheme()" />
+        </div>
+        <div class="field">
+            <label>Product Name</label>
+            <Input @bind-value="productName" />
+        </div>
+    </Body>
+    <Bottom>
+        <Button onClickAsync="BuildAndPack" styleClass="primary" isEnabled="IsReadyToBuild">
+            Build
+        </Button>
+        @if (!FeuerzeugService.IsInstalled())
+        {
+            <div style="position: absolute; bottom: 4.75em; pointer-events: none; color: orange; ">
+                ⚠ Feuerzeug Service is not installed
+            </div>
+        }
+        else if (!FeuerzeugService.IsRunning())
+        {
+            <div style="position: absolute; bottom: 4.75em; pointer-events: none; color: orange; ">
+                ⚠ Feuerzeug Service is not running
+            </div>
+        }
+    </Bottom>
+</AssistantPage>
+
+<style>
+    .assistant-page-body-inner-content {
+        display: flex;
+        flex-direction: column;
+        gap: .5em;
+        width: 50em;
+    }
+</style>
+
+@using System.IO
+@using static FileUtils
+
+@code {
+    static readonly string[] FILE_EXT__LOADER = [".loader.js"];
+    static readonly string[] FILE_EXT__DATA = [".data", ".data.br", ".data.gz"];
+    static readonly string[] FILE_EXT__FRAMEWORK = [".framework.js", ".framework.js.br", ".framework.js.gz"];
+    static readonly string[] FILE_EXT__CODE = [".wasm", ".wasm.br", ".wasm.gz"];
+
+    string webBuildDirectory;
+
+    List<DirectoryInfo> webBuildFolders = new();
+    List<FileInfo> webBuildFiles = new();
+
+    string loaderUrl = string.Empty;
+    string dataUrl = string.Empty;
+    string frameworkUrl = string.Empty;
+    string codeUrl = string.Empty;
+    string streamingAssetsUrl = string.Empty;
+
+    bool IsReadyToBuild
+        => this.loaderUrl != string.Empty
+        && this.dataUrl != string.Empty
+        && this.frameworkUrl != string.Empty
+        && this.codeUrl != string.Empty;
+
+    string productName = string.Empty;
+    string theme = string.Empty;
+
+    Task Browse() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var webBuildDirectory = await App.ShowOpenFolderDialog(this.webBuildDirectory);
+            if (webBuildDirectory is null)
+            {
+                return;
+            }
+
+            this.webBuildDirectory = webBuildDirectory;
+            RefreshWebBuildInfos();
+            Autofill();
+
+            this.RenderLater();
+        }
+    );
+
+    void RefreshWebBuildInfos()
+    {
+        webBuildFolders = new DirectoryInfo(webBuildDirectory)
+            .EnumerateDirectories("*.*", System.IO.SearchOption.AllDirectories)
+            .ToList();
+
+        webBuildFiles = new DirectoryInfo(webBuildDirectory)
+            .EnumerateFiles("*.*", System.IO.SearchOption.AllDirectories)
+            .ToList();
+    }
+
+    void Autofill()
+    {
+        loaderUrl = webBuildFiles.FirstOrDefault(x => FILE_EXT__LOADER.Any(y => x.Name.EndsWith(y)))?.FullName ?? string.Empty;
+        if (loaderUrl != string.Empty)
+            loaderUrl = Path.GetRelativePath(webBuildDirectory, loaderUrl);
+
+        dataUrl = webBuildFiles.FirstOrDefault(x => FILE_EXT__DATA.Any(y => x.Name.EndsWith(y)))?.FullName ?? string.Empty;
+        if (dataUrl != string.Empty)
+            dataUrl = Path.GetRelativePath(webBuildDirectory, dataUrl);
+
+        frameworkUrl = webBuildFiles.FirstOrDefault(x => FILE_EXT__FRAMEWORK.Any(y => x.Name.EndsWith(y)))?.FullName ?? string.Empty;
+        if (frameworkUrl != string.Empty)
+            frameworkUrl = Path.GetRelativePath(webBuildDirectory, frameworkUrl);
+
+        codeUrl = webBuildFiles.FirstOrDefault(x => FILE_EXT__CODE.Any(y => x.Name.EndsWith(y)))?.FullName ?? string.Empty;
+        if (codeUrl != string.Empty)
+            codeUrl = Path.GetRelativePath(webBuildDirectory, codeUrl);
+
+        streamingAssetsUrl = webBuildFolders.FirstOrDefault(x => x.Name == "StreamingAssets")?.FullName ?? string.Empty;
+        if (streamingAssetsUrl != string.Empty)
+            streamingAssetsUrl = Path.GetRelativePath(webBuildDirectory, streamingAssetsUrl);
+
+        foreach (var file in webBuildFiles)
+        {
+            if (file.Length > 1_000_000)
+                continue;
+
+            var content = File.ReadAllText(file.FullName);
+            var match = System.Text.RegularExpressions.Regex.Match(
+                content,
+                @"(\s*productName\:\s*)(.*?)\s*(?:\,)"
+            );
+            if (!match.Success)
+                continue;
+
+            productName = match.Groups[2].Value.Trim('"', '\'', '`');
+            break;
+        }
+    }
+
+    void SelectFolder(string folder, Action<string> callback)
+    {
+        if (webBuildDirectory is null)
+            return;
+
+        Root.Instance.ShowSelection(
+            "Select Folder",
+            folder == string.Empty ? string.Empty : Path.Combine(webBuildDirectory, folder),
+            Enumerable.Empty<(string text, object data)>()
+                .Append(("(None)", string.Empty as object))
+                .Concat(
+                    webBuildFolders.Select(x => (x.Name, x.FullName as object))
+                ).ToList(),
+            x =>
+            {
+                var y = x as string;
+                callback(y == string.Empty ? string.Empty : Path.GetRelativePath(webBuildDirectory, y));
+                this.RenderLater();
+            }
+        );
+    }
+
+    void SelectFile(string file, Action<string> callback, params string[] extensions)
+    {
+        if (webBuildDirectory is null)
+            return;
+
+        Root.Instance.ShowSelection(
+            "Select File",
+            Path.Combine(webBuildDirectory, file),
+            webBuildFiles
+                .Where(x => extensions.Any(y => x.Name.EndsWith(y)))
+                .Select(x => (x.Name, x.FullName as object))
+                .ToList(),
+            x =>
+            {
+                callback(Path.GetRelativePath(webBuildDirectory, x as string));
+                this.RenderLater();
+            }
+        );
+    }
+
+    void SelectTheme()
+    {
+        Root.Instance.ShowSelection(
+            "Select Theme",
+            theme,
+            Enumerable.Empty<(string text, object data)>()
+                .Append(("(None)", string.Empty as object))
+                .Concat(
+                    new DirectoryInfo(Path.Combine(Environment.CurrentDirectory, "Resources", "WebGL", "themes"))
+                        .EnumerateDirectories()
+                        .Select(x => (x.Name, x.Name as object))
+                ).ToList(),
+            x =>
+            {
+                theme = x as string;
+                this.RenderLater();
+            }
+        );
+    }
+
+    Task BuildAndPack() => Run(
+        App.BusinessScope.Local,
+        () => Task.Run(() =>
+        {
+            Build();
+            Pack();
+            Open();
+        })
+    );
+
+    void Build()
+    {
+        var output = Path.Combine(Path.GetDirectoryName(Page_AdminHub.GetFeuerzeugServicePath()), "webgl");
+
+        DeleteFolder(output);
+        CreateFolder(output);
+
+        var loaderUrl = $"loader{Path.GetExtension(this.loaderUrl)}";
+        var dataExtension = Path.GetExtension(this.dataUrl);
+        var dataUrl = $"data{(dataExtension == ".data" ? "" : dataExtension)}";
+        var frameworkUrl = $"framework{Path.GetExtension(this.frameworkUrl)}";
+        var codeUrl = $"code{Path.GetExtension(this.codeUrl)}";
+
+        CopyFile(
+            Path.Combine(webBuildDirectory, this.loaderUrl),
+            Path.Combine(output, loaderUrl)
+        );
+
+        CopyFile(
+            Path.Combine(webBuildDirectory, this.dataUrl),
+            Path.Combine(output, dataUrl)
+        );
+
+        CopyFile(
+            Path.Combine(webBuildDirectory, this.frameworkUrl),
+            Path.Combine(output, frameworkUrl)
+        );
+
+        CopyFile(
+            Path.Combine(webBuildDirectory, this.codeUrl),
+            Path.Combine(output, codeUrl)
+        );
+
+        if (streamingAssetsUrl != string.Empty)
+        {
+            CopyFolder(
+                Path.Combine(webBuildDirectory, streamingAssetsUrl),
+                Path.Combine(output, streamingAssetsUrl)
+            );
+        }
+
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "Resources", "WebGL")))
+        {
+            CopyFile(
+                Path.Combine(Environment.CurrentDirectory, "Resources", "WebGL", file),
+                Path.Combine(output, Path.GetFileName(file))
+            );
+        }
+
+        var configContent = File.ReadAllText(Path.Combine(output, "config.js"));
+        configContent = configContent
+            .Replace("{{ productName }}", productName == string.Empty ? "Untitled" : productName)
+            .Replace("{{ loaderUrl }}", loaderUrl)
+            .Replace("{{ dataUrl }}", dataUrl)
+            .Replace("{{ frameworkUrl }}", frameworkUrl)
+            .Replace("{{ codeUrl }}", codeUrl)
+            .Replace("{{ streamingAssetsUrl }}", streamingAssetsUrl == string.Empty ? "StreamingAssets" : streamingAssetsUrl);
+        File.WriteAllText(Path.Combine(output, "config.js"), configContent);
+
+        DeleteFile(Path.Combine(output, "config.theme.js"));
+        CreateFile(Path.Combine(output, "config.theme.js"));
+
+        DeleteFile(Path.Combine(output, "style.theme.css"));
+        CreateFile(Path.Combine(output, "style.theme.css"));
+
+        if (theme != string.Empty)
+        {
+            var themeFolder = Path.Combine(Environment.CurrentDirectory, "Resources", "WebGL", "themes", theme);
+            if (Directory.Exists(themeFolder))
+            {
+                CopyFile(
+                    Path.Combine(themeFolder, "config.js"),
+                    Path.Combine(output, "config.theme.js")
+                );
+
+                CopyFile(
+                    Path.Combine(themeFolder, "style.css"),
+                    Path.Combine(output, "style.theme.css")
+                );
+            }
+        }
+    }
+
+    void Pack()
+    {
+        var source = Path.Combine(
+            Path.GetDirectoryName(Page_AdminHub.GetFeuerzeugServicePath()),
+            "webgl"
+        );
+
+        var destination = Path.GetFullPath(
+            Path.Combine(source, "..", "webgl-packed")
+        );
+
+        var name = this.productName;
+        foreach (var c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '-');
+        if (name == string.Empty)
+            name = "untitled";
+        else
+            name = name.ToLowerInvariant().Replace(' ', '-');
+
+        var destinationZip = Path.Combine(destination, $"{name}.zip");
+
+        CreateFolder(destination);
+        DeleteFile(destinationZip);
+
+        System.IO.Compression.ZipFile.CreateFromDirectory(
+            source,
+            destinationZip
+        );
+
+        Utils.Open(destination);
+    }
+
+    void Open()
+    {
+        if (FeuerzeugService.IsInstalled() && FeuerzeugService.IsRunning())
+        {
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(
+                    "http://localhost:5180/webgl"
+                )
+                    {
+                        UseShellExecute = true
+                    }
+            );
+        }
+    }
+
+}

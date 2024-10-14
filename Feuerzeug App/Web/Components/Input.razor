@@ -1,0 +1,21 @@
+﻿<input type="@(type ?? "text")"
+       class="interactable"
+       disabled="@(!isEnabled)"
+       value="@value"
+       @oninput="OnInput">
+
+@code {
+
+    [Parameter] public string value { get; set; }
+    [Parameter] public EventCallback<string> valueChanged { get; set; }
+
+    [Parameter] public string type { get; set; }
+
+    [Parameter] public bool isEnabled { get; set; } = true;
+
+    async Task OnInput(ChangeEventArgs e)
+    {
+        await valueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
+
+}

@@ -1,0 +1,218 @@
+@font-face {
+    font-family: 'Roboto';
+    font-style: normal;
+    font-weight: 300;
+    src: url(roboto-300.woff2) format('woff2');
+}
+
+:root {
+    --header-height: 4em;
+    --footer-height: 4em;
+    --logo-height: 3em;
+    --color-1: #1f2429;
+    --color-2: #3d4752;
+    --color-3: #6f7984;
+    --color-4: #eef2f7;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: Roboto, sans-serif;
+    line-height: 1.25;
+    color: var(--color-2);
+    background-color: var(--background__body, var(--color-1));
+}
+
+:not(:root):fullscreen::backdrop {
+    background: var(--background__body, var(--color-1));
+}
+
+.hidden {
+    display: none !important;
+}
+
+.inner {
+    width: var(--inner-width, unset);
+}
+
+#header {
+    flex: 0 0 var(--header-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--color-1);
+}
+
+#logo {
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+    height: var(--logo-height);
+    margin: auto 0;
+}
+
+#content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: var(--content-padding, 0);
+}
+
+#content .inner {
+    background-color: var(--background__content, transparent);
+}
+
+#game-canvas-container {
+    position: relative;
+}
+
+#play {
+    position: absolute;
+    z-index: 1;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+#play::before,
+#play::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    transition: .1s;
+}
+
+#play::before {
+    width: 5em;
+    height: 5em;
+    background-color: var(--color-1);
+    border-radius: 50%;
+}
+
+#play::after {
+    width: 2em;
+    height: 2.5em;
+    background-color: var(--color-4);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    margin-left: .325em;
+}
+
+#play:hover::before,
+#play:hover::after {
+    scale: 1.25;
+}
+
+#play:hover::before {
+    background-color: var(--accent-color, var(--color-3));
+}
+
+#progress {
+    position: absolute;
+    z-index: 1;
+    width: 13.5em;
+    height: max-content;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    pointer-events: none;
+}
+
+#progresstext {
+    flex: 1;
+    color: var(--color-4);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: .5em 0;
+}
+
+#progressbar {
+    flex: 0 0 1em;
+    width: 100%;
+    background-color: var(--color-3);
+    border: .175em solid var(--color-1);
+    box-sizing: border-box;
+}
+
+#progressbarvalue {
+    width: 0;
+    height: 100%;
+    background-color: var(--accent-color, var(--color-4));
+}
+
+#fullscreen-button {
+    position: absolute;
+    z-index: 2;
+    background: url(fullscreen.svg) var(--background__game-canvas-border, var(--color-1)) no-repeat;
+    background-size: 2rem;
+    background-position: .25em .25em;
+    border: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    cursor: pointer;
+    bottom: .5em;
+    right: .5em;
+    opacity: 0;
+    scale: .9;
+    transition: .1s opacity, .1s scale;
+}
+
+#game-canvas-container:has(#play:hover) #fullscreen-button,
+#game-canvas-container:has(#game-canvas:hover) #fullscreen-button,
+#fullscreen-button:hover,
+#fullscreen-button:hover::before {
+    opacity: 1;
+    scale: 1;
+}
+
+#game-canvas-container:has(#game-canvas.clickable:hover) #fullscreen-button,
+#game-canvas-container:has(#game-canvas.clickable:hover) #fullscreen-button::before,
+#fullscreen-button:hover,
+#fullscreen-button:hover::before {
+    background-color: var(--accent-color, var(--color-3));
+}
+
+:fullscreen #fullscreen-button {
+    display: none;
+}
+
+#game-canvas {
+    display: block;
+    transform-origin: 0% 0%;
+    background-color: var(--color-2);
+    border-bottom: 0 solid var(--background__game-canvas-border);
+    box-shadow: 0 1em 6em -3em black;
+}
+
+#game-canvas.clickable {
+    cursor: pointer;
+}
+
+:fullscreen #game-canvas {
+    position: fixed;
+    margin: 0;
+    border-bottom-width: 0 !important;
+    cursor: default;
+}
+
+#footer {
+    flex: 0 0 var(--footer-height);
+    background-color: var(--color-1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

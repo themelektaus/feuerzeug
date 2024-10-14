@@ -1,0 +1,4 @@
+﻿ShowWindow
+SetForegroundWindow
+//RegisterWindowMessage
+//PostMessage

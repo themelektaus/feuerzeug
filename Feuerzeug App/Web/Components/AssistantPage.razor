@@ -1,0 +1,73 @@
+﻿<h1>
+    @if (previousPage is not null)
+    {
+        <Button onClickAsync="GotoPreviousPage"></Button>
+    }
+    @if (icon is not null)
+    {
+        <div style="background-image: url(@icon); "></div>
+    }
+    @Title
+
+    @if (Title is not null)
+    {
+        <div class="loading-local">
+            <Loading isVisible="true" />
+        </div>
+    }
+</h1>
+
+<div class="assistant-page-body">
+    <div class="assistant-page-body-content">
+        <div class="assistant-page-body-inner-content">
+            @if (!isLoading)
+            {
+                @Body
+            }
+            <Loading @ref="loading"
+                     isVisible="isLoading"
+                     text="@loadingText"
+                     onCancelAsync="App.Instance.CTS is null ? (Func<Task>) null : App.Instance.Cancel" />
+        </div>
+    </div>
+    @if (BottomLeft is not null || Bottom is not null || BottomRight is not null)
+    {
+        <div class="assistant-page-body-bottom">
+            @BottomLeft
+            <div style="flex: 1; "></div>
+            @Bottom
+            <div style="flex: 1; "></div>
+            @BottomRight
+        </div>
+    }
+</div>
+
+@code {
+
+    [Parameter] public RenderFragment Title { get; set; }
+    [Parameter] public RenderFragment Body { get; set; }
+    [Parameter] public RenderFragment BottomLeft { get; set; }
+    [Parameter] public RenderFragment Bottom { get; set; }
+    [Parameter] public RenderFragment BottomRight { get; set; }
+    [Parameter] public string icon { get; set; }
+    [Parameter] public bool isLoading { get; set; }
+    [Parameter] public Type previousPage { get; set; }
+
+    async Task GotoPreviousPage()
+    {
+        await Root.Instance.GotoAsync(previousPage);
+    }
+
+    public static AssistantPage Instance { get; private set; }
+
+    protected override void OnInitialized() => Instance = this;
+
+    Loading loading;
+    string loadingText;
+
+    public async Task SetLoadingText(string text)
+    {
+        loadingText = text;
+        await InvokeAsync(StateHasChanged);
+    }
+}

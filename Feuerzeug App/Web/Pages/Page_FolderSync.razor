@@ -1,0 +1,577 @@
+﻿@inherits Page
+
+<AssistantPage icon="img/foldersync.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Folder Sync
+    </Title>
+    <Body>
+        <x-fill />
+        <div data-group="Path">
+            <div class="field">
+                <label>Left</label>
+                <input class="browse interactable" value="@data.left" readonly
+                       @onclick="BrowseLeft" />
+            </div>
+            <div class="field">
+                <label>Right</label>
+                <input class="browse interactable" value="@data.right" readonly
+                       @onclick="BrowseRight" />
+            </div>
+        </div>
+        <div data-group="Comparison">
+            <div class="table fixed">
+                <div class="table-section table-section-header">
+                    <div>
+                        <div>Left</div>
+                        <div style="text-align: center; ">Difference</div>
+                        <div>Right</div>
+                    </div>
+                </div>
+                <div class="table-section table-section-content">
+                    @{ string folder = null; }
+                    @foreach (var file in comparison.files
+                        .Where(x => x.difference != Comparison.Difference.Identical)
+                    )
+                    {
+                        if (folder != file.folder)
+                        {
+                            folder = file.folder;
+                            <div class="folder">
+                                <div>@file.GetFolderHtml()</div>
+                            </div>
+                        }
+                        <div>
+                            <div>@file.GetLeftHtml()</div>
+                            <div class="center-column">
+                                <Button styleClass="@GetToggleStyle(file, false)"
+                                        onClick="() => Toggle(file, true)"></Button>
+                                <div>@file.GetDifferenceHtml()</div>
+                                <Button styleClass="@GetToggleStyle(file, true)"
+                                        onClick="() => Toggle(file, false)"></Button>
+                            </div>
+                            <div>@file.GetRightHtml()</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </Body>
+    <Bottom>
+        <Button onClickAsync="Compare">
+            Compare
+        </Button>
+        <Button onClickAsync="Sync" styleClass="primary" isEnabled="comparison.files.Any(x => x.difference != Comparison.Difference.Identical)">
+            Sync
+        </Button>
+    </Bottom>
+</AssistantPage>
+
+<style>
+    [data-group="Comparison"] {
+        flex: 1;
+        overflow: hidden;
+        padding-top: 1.5em !important;
+    }
+
+    [data-group="Comparison"]::before {
+        position: absolute;
+        margin-top: -2.625em !important;
+    }
+
+    .table.fixed .table-section > div {
+        grid-template-columns: 1fr 7.5rem 1fr;
+    }
+
+    .table.fixed .table-section > div.folder {
+        grid-template-columns: 1fr;
+        padding-top: 1.5em;
+        color: var(--fg-color__group-title);
+        background-color: transparent;
+        text-align: center;
+    }
+
+    .table.fixed .table-section-content > div > div > span {
+        font-size: .8em;
+        translate: 0 .2em;
+        float: right;
+        opacity: .5;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column {
+        border-radius: 10em;
+        font-size: .9em;
+        padding: 0;
+        display: flex;
+        white-space: nowrap;
+        align-items: stretch;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button {
+        flex: 0 1 1.5em;
+        background-image: url(img/back.svg);
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 1em;
+        cursor: unset;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button:not(& + div) {
+        padding-right: .5em;
+        translate: .25px 0;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button + div {
+        background-color: var(--fg-color__group-title);
+        color: #000;
+        flex: 1 1 auto;
+        padding: .125em;
+        text-align: center;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button:not(.active) + div {
+        border-top-left-radius: 10em;
+        border-bottom-left-radius: 10em;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button + div:not(:has(+ button.active)) {
+        border-top-right-radius: 10em;
+        border-bottom-right-radius: 10em;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button + div + button {
+        padding-left: .5em;
+        scale: -1 1;
+        translate: -.25px 0;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button.active {
+        background-image: url(img/back-black.svg);
+        background-color: var(--fg-color__group-title);
+        filter: none;
+        border-radius: 0;
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button.delete {
+        background-image: url(img/remove.svg);
+    }
+
+    .table.fixed .table-section-content > div > div.center-column button.active.delete {
+        background-color: #c22;
+    }
+</style>
+
+@using System.IO
+
+@code {
+
+    public class Data
+    {
+        public string left = string.Empty;
+        public string right = string.Empty;
+    }
+
+    public class Comparison
+    {
+        public enum Difference
+        {
+            OnlyLeft,
+            OnlyRight,
+            LeftNewer,
+            RightNewer,
+            LeftBigger,
+            RightBigger,
+            //Content,
+            Identical
+        }
+
+        public enum Direction
+        {
+            Nowhere,
+            LeftToRight,
+            RightToLeft
+        }
+
+        public class File
+        {
+            public Difference difference;
+            public Direction direction;
+            public string path;
+            public readonly string folder;
+            public readonly string file;
+            public readonly FileInfo info;
+            public readonly long size;
+
+            public File(FileInfo info, int skip) : this(info.FullName, skip)
+            {
+                this.info = info;
+                this.size = info.Length;
+            }
+
+            public File(string path, int skip)
+            {
+                this.path = path.Substring(skip);
+                folder = Path.GetDirectoryName(this.path);
+                file = Path.GetFileName(this.path);
+            }
+
+            public MarkupString GetFolderHtml()
+                => new(folder == string.Empty ? "./" : folder);
+
+            public MarkupString GetLeftHtml()
+                => difference == Difference.OnlyRight ? default : new($"{file}<span>{size.ToHumanizedSizeString()}</span>");
+
+            public MarkupString GetDifferenceHtml()
+                => new(GetDifferenceString());
+
+            string GetDifferenceString() => difference switch
+            {
+                Difference.OnlyLeft => "Only Left",
+                Difference.OnlyRight => "Only Right",
+                Difference.LeftNewer => "Left Newer",
+                Difference.RightNewer => "Right Newer",
+                Difference.LeftBigger => "Left Bigger",
+                Difference.RightBigger => "Right Bigger",
+                Difference.Identical => "Identical",
+                _ => "Unknown"
+            };
+
+            public MarkupString GetRightHtml()
+                => difference == Difference.OnlyLeft ? default : new($"{file}<span>{size.ToHumanizedSizeString()}</span>");
+
+            public void UpdateDirection()
+            {
+                if (difference == Difference.OnlyLeft || difference == Difference.LeftNewer || difference == Difference.LeftBigger)
+                {
+                    direction = Direction.LeftToRight;
+                    return;
+                }
+
+                if (difference == Difference.OnlyRight || difference == Difference.RightNewer || difference == Difference.RightBigger)
+                {
+                    direction = Direction.RightToLeft;
+                    return;
+                }
+
+                direction = Direction.Nowhere;
+            }
+        }
+        public readonly List<File> files = new();
+
+        public void Reset() => files.Clear();
+    }
+
+    readonly Data data = new();
+    readonly Comparison comparison = new();
+
+    Task BrowseLeft() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var left = await App.ShowOpenFolderDialog(data.left);
+            if (left is null)
+            {
+                return;
+            }
+
+            data.left = left;
+
+            this.RenderLater();
+        }
+    );
+
+    Task BrowseRight() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var right = await App.ShowOpenFolderDialog(data.right);
+            if (right is null)
+            {
+                return;
+            }
+
+            data.right = right;
+
+            this.RenderLater();
+        }
+    );
+
+    static string GetToggleStyle(Comparison.File file, bool rightToLeft)
+    {
+        var result = new List<string>();
+
+        if (rightToLeft)
+        {
+            if (file.difference == Comparison.Difference.OnlyRight)
+                result.Add("delete");
+
+            if (file.direction == Comparison.Direction.LeftToRight)
+                result.Add("active");
+            else
+                result.Add("hidden");
+        }
+        else
+        {
+            if (file.difference == Comparison.Difference.OnlyLeft)
+                result.Add("delete");
+
+            if (file.direction == Comparison.Direction.RightToLeft)
+                result.Add("active");
+            else
+                result.Add("hidden");
+        }
+
+        return string.Join(' ', result);
+    }
+
+    void Toggle(Comparison.File file, bool rightToLeft)
+    {
+        if (rightToLeft)
+        {
+            file.direction = file.direction == Comparison.Direction.RightToLeft
+                ? Comparison.Direction.Nowhere
+                : Comparison.Direction.RightToLeft;
+        }
+        else
+        {
+            file.direction = file.direction == Comparison.Direction.LeftToRight
+                ? Comparison.Direction.Nowhere
+                : Comparison.Direction.LeftToRight;
+        }
+        this.RenderLater();
+    }
+
+    Task Compare() => Run(
+        App.BusinessScope.Global,
+        async ct =>
+        {
+            //using var sha256 = System.Security.Cryptography.SHA256.Create();
+
+            comparison.Reset();
+            await this.RenderLaterAsync();
+
+            List<FileInfo> leftInfos;
+            List<FileInfo> rightInfos;
+
+            var leftSkip = data.left.TrimEnd(Path.PathSeparator).Length + 1;
+            var rightSkip = data.right.TrimEnd(Path.PathSeparator).Length + 1;
+
+            try
+            {
+                leftInfos = await Task.Run(() => GetFileInfosAsync(data.left, leftSkip, ct));
+                if (ct.IsCancellationRequested)
+                    return;
+
+                rightInfos = await Task.Run(() => GetFileInfosAsync(data.right, rightSkip, ct));
+                if (ct.IsCancellationRequested)
+                    return;
+            }
+            catch (Exception ex)
+            {
+                Root.Instance.ShowException(ex);
+                return;
+            }
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    foreach (var leftInfo in leftInfos)
+                    {
+                        comparison.files.Add(new(leftInfo, leftSkip));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    comparison.Reset();
+                    Root.Instance.ShowException(ex);
+                    return;
+                }
+
+                try
+                {
+                    foreach (var rightInfo in rightInfos)
+                    {
+                        var rightFile = new Comparison.File(rightInfo.FullName, rightSkip);
+
+                        var file = comparison.files.FirstOrDefault(x => x.path == rightFile.path);
+                        if (file is null)
+                        {
+                            rightFile.difference = Comparison.Difference.OnlyRight;
+                            comparison.files.Add(rightFile);
+                            continue;
+                        }
+
+                        var timeDifference = file.info.LastWriteTime.Ticks - rightInfo.LastWriteTime.Ticks;
+                        if (timeDifference > 0)
+                        {
+                            file.difference = Comparison.Difference.LeftNewer;
+                            continue;
+                        }
+                        if (timeDifference < -100_000_000)
+                        {
+                            file.difference = Comparison.Difference.RightNewer;
+                            continue;
+                        }
+
+                        var sizeDifference = file.info.Length - rightInfo.Length;
+                        if (sizeDifference > 0)
+                        {
+                            file.difference = Comparison.Difference.LeftBigger;
+                            continue;
+                        }
+                        if (sizeDifference < 0)
+                        {
+                            file.difference = Comparison.Difference.RightBigger;
+                            continue;
+                        }
+
+                        //if (
+                        //    ComputeHash(leftFullPath, sha256) !=
+                        //    ComputeHash(rightFullPath, sha256)
+                        //)
+                        //{
+                        //    file.difference = Comparison.Difference.Content;
+                        //    continue;
+                        //}
+
+                        file.difference = Comparison.Difference.Identical;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Root.Instance.ShowException(ex);
+                }
+
+                foreach (var file in comparison.files)
+                {
+                    file.UpdateDirection();
+                }
+            });
+        },
+        async () =>
+        {
+            Root.Instance.ShowMessage("Task canceled");
+            await Task.CompletedTask;
+        }
+    );
+
+    Task Sync() => Run(
+        App.BusinessScope.Global,
+        async ct =>
+        {
+            foreach (var file in comparison.files.Where(x => x.direction != Comparison.Direction.Nowhere))
+            {
+                if (ct.IsCancellationRequested)
+                    break;
+
+                await AssistantPage.Instance.SetLoadingText(file.path);
+
+                var leftFolder = Path.Combine(data.left, file.folder);
+                var leftPath = Path.Combine(data.left, file.path);
+
+                var rightFolder = Path.Combine(data.right, file.folder);
+                var rightPath = Path.Combine(data.right, file.path);
+
+                try
+                {
+                    if (file.direction == Comparison.Direction.LeftToRight)
+                    {
+                        if (File.Exists(leftPath))
+                        {
+                            Directory.CreateDirectory(rightFolder);
+                            if (!(await CopyFileAsync(leftPath, rightPath, ct)))
+                                if (File.Exists(rightPath))
+                                    File.Delete(rightPath);
+                        }
+                        else if (File.Exists(rightPath))
+                        {
+                            File.Delete(rightPath);
+                        }
+                    }
+                    else if (file.direction == Comparison.Direction.RightToLeft)
+                    {
+                        if (File.Exists(rightPath))
+                        {
+                            Directory.CreateDirectory(leftFolder);
+                            if (!(await CopyFileAsync(rightPath, leftPath, ct)))
+                                if (File.Exists(leftPath))
+                                    File.Delete(leftPath);
+                        }
+                        else if (File.Exists(leftPath))
+                        {
+                            File.Delete(leftPath);
+                        }
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    if (ct.IsCancellationRequested)
+                        break;
+
+                    file.difference = Comparison.Difference.Identical;
+                    file.direction = Comparison.Direction.Nowhere;
+                }
+                catch (Exception ex)
+                {
+                    Root.Instance.ShowException(ex);
+                }
+            }
+        },
+        async () =>
+        {
+            Root.Instance.ShowMessage("Task canceled");
+            await Task.CompletedTask;
+        }
+    );
+    //static string ComputeHash(string file, System.Security.Cryptography.SHA256 sha256)
+    //{
+    //    using var stream = new FileStream(file, FileMode.Open, FileAccess.Read);
+    //    return BitConverter.ToString(sha256.ComputeHash(stream));
+    //}
+
+    static async Task<List<FileInfo>> GetFileInfosAsync(string path, int skip, CT ct)
+    {
+        string currentFolder = null;
+
+        var folder = new DirectoryInfo(path);
+        var files = new List<FileInfo>();
+
+        foreach (var file in folder.EnumerateFiles("*.*", SearchOption.AllDirectories))
+        {
+            if (ct.IsCancellationRequested)
+                break;
+
+            if (currentFolder != file.DirectoryName)
+            {
+                currentFolder = file.DirectoryName;
+                await AssistantPage.Instance.SetLoadingText(
+                    currentFolder.Substring(Math.Min(skip, currentFolder.Length))
+                );
+            }
+            files.Add(file);
+        }
+
+        return files;
+    }
+
+    static async Task<bool> CopyFileAsync(string sourceFileName, string destinationFileName, CT ct)
+    {
+        try
+        {
+            using var sourceStream = File.OpenRead(sourceFileName);
+            using var destinationStream = File.Create(destinationFileName);
+            await sourceStream.CopyToAsync(destinationStream, ct);
+        }
+        catch (TaskCanceledException)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+}

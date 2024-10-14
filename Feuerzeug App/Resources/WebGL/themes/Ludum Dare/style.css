@@ -1,0 +1,50 @@
+:root {
+    --accent-color: #e53;
+    --background__body: var(--color-3);
+    --background__content: var(--color-4);
+    --background__game-canvas-border: #b9c4d0;
+}
+
+#play::before {
+    border-radius: unset;
+}
+
+#play::after {
+    width: 3em;
+    height: 3.5em;
+    margin-left: 0;
+}
+
+#fullscreen-button {
+    background-size: 2rem;
+    background-position: -.125em .375rem;
+    width: 2.5rem;
+    height: 2.75rem;
+    bottom: 0;
+    right: 0;
+    opacity: 1;
+    scale: 1;
+}
+
+#fullscreen-button::before {
+    content: '';
+    width: 2.75rem;
+    height: 2.75rem;
+    clip-path: polygon(0 100%, 100% 0, 100% 100%);
+    background-color: var(--background__game-canvas-border, var(--color-1));
+    position: absolute;
+    top: 0;
+    left: -2.73rem;
+}
+
+@font-face {
+    font-family: Raleway;
+    font-style: normal;
+    font-weight: 600;
+    src: url(raleway-600.woff2) format('woff2');
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: Raleway, sans-serif;
+    font-weight: 600;
+}

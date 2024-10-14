@@ -1,0 +1,24 @@
+﻿<li class="interactable @(alwaysEnabled ? "always-enabled" : "")" @onclick="OnClick">
+    @ChildContent
+</li>
+
+@inject IJSRuntime javascript
+
+@code {
+
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public Action onClick { get; set; }
+    [Parameter] public Func<Task> onClickAsync { get; set; }
+    [Parameter] public bool isEnabled { get; set; } = true;
+    [Parameter] public bool alwaysEnabled { get; set; }
+
+    async Task OnClick()
+    {
+        await javascript.InvokeVoidAsync("closeMenu");
+
+        onClick?.Invoke();
+
+        await (onClickAsync?.Invoke() ?? Task.CompletedTask);
+    }
+
+}
