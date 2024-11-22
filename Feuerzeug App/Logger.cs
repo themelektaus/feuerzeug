@@ -19,7 +19,7 @@ public static class Logger
         public string type;
         public string message;
     }
-    
+
     public static List<Entry> GetEntries()
     {
         lock (@lock)

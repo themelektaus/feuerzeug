@@ -35,7 +35,7 @@ public class PowerShellSession : IDisposable
             try
             {
                 var handle = powershell.BeginInvoke();
-                WaitHandle.WaitAny([handle.AsyncWaitHandle, ct.WaitHandle ]);
+                WaitHandle.WaitAny([handle.AsyncWaitHandle, ct.WaitHandle]);
                 if (ct.IsCancellationRequested)
                     powershell.Stop();
                 ct.ThrowIfCancellationRequested();

@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Threading;
-
 using File = System.IO.File;
+using HWND = Windows.Win32.Foundation.HWND;
+using PInvoke = Windows.Win32.PInvoke;
+using SHOW_WINDOW_CMD = Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD;
 using Task = System.Threading.Tasks.Task;
 using TaskBoolean = System.Threading.Tasks.Task<bool>;
-
-using PInvoke = Windows.Win32.PInvoke;
-using HWND = Windows.Win32.Foundation.HWND;
-using SHOW_WINDOW_CMD = Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD;
 
 namespace Feuerzeug;
 
