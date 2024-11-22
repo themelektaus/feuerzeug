@@ -1,15 +1,14 @@
 ﻿<div style="display: flex; margin: .125rem .125rem .5rem .125rem; ">
-    <input placeholder="Search"
-           @bind:event="oninput"
-           @bind:get="value"
-           @bind:set="valueChanged.InvokeAsync">
+    <input placeholder="Search" @oninput="OnInput">
 </div>
 
 @code {
 
-    [Parameter] public string value { get; set; }
-    [Parameter] public EventCallback<string> valueChanged { get; set; }
+    [Parameter] public EventCallback<string> onSearch { get; set; }
 
-    string[] GetKeywords() => value.Trim('/').Split('|');
+    async Task OnInput(ChangeEventArgs e)
+    {
+        await onSearch.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
 
 }

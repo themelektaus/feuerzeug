@@ -42,6 +42,8 @@
     }
 </div>
 
+@implements IDisposable
+
 @code {
 
     [Parameter] public RenderFragment Title { get; set; }
@@ -58,9 +60,26 @@
         await Root.Instance.GotoAsync(previousPage);
     }
 
+    async Task OnMouseDown(int button)
+    {
+        if (button == 3 && previousPage is not null)
+        {
+            await GotoPreviousPage();
+        }
+    }
+
     public static AssistantPage Instance { get; private set; }
 
-    protected override void OnInitialized() => Instance = this;
+    protected override void OnInitialized()
+    {
+        Instance = this;
+        Root.MouseDown += OnMouseDown;
+    }
+
+    public void Dispose()
+    {
+        Root.MouseDown -= OnMouseDown;
+    }
 
     Loading loading;
     string loadingText;

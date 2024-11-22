@@ -1,0 +1,96 @@
+﻿@inherits Page
+
+<AssistantPage icon="img/star.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Hortophyll
+    </Title>
+    <Body>
+        <div class="field">
+            <label>Textures Data</label>
+            <input class="browse interactable" value="@texturesDataPath" readonly
+                   @onclick="Browse_TexturesDataPath" />
+        </div>
+        <div class="field">
+            <label>Meshes Input</label>
+            <input class="browse interactable" value="@meshesInputPath" readonly
+                   @onclick="Browse_MeshesInputPath" />
+        </div>
+        <div class="field">
+            <label>Meshes Output</label>
+            <input class="browse interactable" value="@meshesOutputPath" readonly
+                   @onclick="Browse_MeshesOutputPath" />
+        </div>
+    </Body>
+    <Bottom>
+        <Button onClickAsync="Patch" styleClass="primary">
+            Patch
+        </Button>
+    </Bottom>
+</AssistantPage>
+
+<style>
+    .assistant-page-body-inner-content {
+        display: flex;
+        flex-direction: column;
+        gap: .5em;
+        width: 50em;
+    }
+</style>
+
+@code {
+
+    string texturesDataPath;
+    string meshesInputPath;
+    string meshesOutputPath;
+
+    Task Browse_TexturesDataPath() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var path = await App.ShowOpenFolderDialog(texturesDataPath);
+            if (path is not null)
+            {
+                texturesDataPath = path;
+                this.RenderLater();
+            }
+        }
+    );
+
+    Task Browse_MeshesInputPath() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var path = await App.ShowOpenFolderDialog(meshesInputPath);
+            if (path is not null)
+            {
+                meshesInputPath = path;
+                this.RenderLater();
+            }
+        }
+    );
+
+    Task Browse_MeshesOutputPath() => Run(
+        App.BusinessScope.Local,
+        async () =>
+        {
+            var path = await App.ShowOpenFolderDialog(meshesOutputPath);
+            if (path is not null)
+            {
+                meshesOutputPath = path;
+                this.RenderLater();
+            }
+        }
+    );
+
+    Task Patch() => Run(
+        App.BusinessScope.Local,
+        () => Task.Run(() => NifInstance.BulkModify(
+            texturesDataPath,
+            meshesInputPath,
+            meshesOutputPath
+        ))
+    );
+
+}

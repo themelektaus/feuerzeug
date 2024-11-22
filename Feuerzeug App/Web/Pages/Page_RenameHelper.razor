@@ -13,7 +13,7 @@
         </div>
         <div data-group="Files">
             <div class="table fixed">
-                <InputSearch @bind-value="searchText" />
+                <InputSearch onSearch="OnSearch" />
                 <div class="table-section table-section-header">
                     <div>
                         <div>Old Name</div>
@@ -88,7 +88,13 @@
     }
 
     string folder = string.Empty;
+
     string searchText = string.Empty;
+
+    void OnSearch(string value)
+    {
+        searchText = value;
+    }
 
     readonly List<File> files = new();
 

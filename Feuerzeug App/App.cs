@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,6 +17,8 @@ public class App : IDisposable
 
     public Update Update { get; private set; }
 
+    readonly KeyboardHook keyboardHook;
+
     Task updateCheckTask;
     int nextUpdateCheckCountdown;
 
@@ -29,6 +33,20 @@ public class App : IDisposable
         {
             Logger.Pending("Closing");
         };
+
+        keyboardHook = new();
+        keyboardHook.KeyPressed += async (sender, e) =>
+        {
+            if (USer_IsRunning())
+            {
+                await USer_Stop();
+            }
+            else
+            {
+                await USer_Start();
+            }
+        };
+        keyboardHook.RegisterHotKey(KeyboardHook.ModifierKeys.None, Keys.Scroll);
 
         updateCheckTask = Task.Run(async () =>
         {
@@ -60,6 +78,8 @@ public class App : IDisposable
 
     public void Dispose()
     {
+        keyboardHook.Dispose();
+
         var task = updateCheckTask;
 
         updateCheckTask = null;
@@ -173,6 +193,41 @@ public class App : IDisposable
         return (await dialog.ShowDialogAsync()) == DialogResult.OK
             ? dialog.SelectedPath
             : null;
+    }
+
+    public static bool USer_IsRunning()
+    {
+        return Process.GetProcessesByName("USer").Length > 0;
+    }
+
+    public static async Task USer_Start()
+    {
+        await USer_Stop();
+
+        Utils.Open(Path.Combine("Resources", "USer.exe"), createNoWindow: true);
+
+        await Utils.WaitForAsync(() => USer_IsRunning(), TimeSpan.FromSeconds(10));
+
+        if (Root.Instance?.Page == typeof(Web.Pages.Page_AdminHub))
+        {
+            Root.Instance.Refresh();
+        }
+    }
+
+    public static async Task USer_Stop()
+    {
+        foreach (var process in Process.GetProcessesByName("USer"))
+        {
+            process.Kill();
+            process.WaitForExit();
+        }
+
+        await Utils.WaitForAsync(() => !USer_IsRunning(), TimeSpan.FromSeconds(10));
+
+        if (Root.Instance?.Page == typeof(Web.Pages.Page_AdminHub))
+        {
+            Root.Instance.Refresh();
+        }
     }
 
 }

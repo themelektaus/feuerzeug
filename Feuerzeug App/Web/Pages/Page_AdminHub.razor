@@ -49,16 +49,16 @@
             <div class="name">
                 <b>US</b>er
             </div>
-
-            @if (USer_IsRunning())
+            <div style="position: absolute; color: orange; margin-inline: 5em 1em; text-align: center; font-size: .75em; ">Scroll Lock</div>
+            @if (App.USer_IsRunning())
             {
                 <div class="status running">Running</div>
-                <Button styleClass="negative" onClickAsync="USer_Stop">Stop</Button>
+                <Button styleClass="negative" onClickAsync="App.USer_Stop">Stop</Button>
             }
             else
             {
                 <div class="status stopped">Stopped</div>
-                <Button styleClass="positive" onClickAsync="USer_Start">Start</Button>
+                <Button styleClass="positive" onClickAsync="App.USer_Start">Start</Button>
             }
         </div>
     </Body>
@@ -159,25 +159,25 @@
     public static string GetFeuerzeugServicePath()
     {
 #if DEBUG
-        var current = new System.IO.DirectoryInfo(Environment.CurrentDirectory);
-        do
+    var current = new System.IO.DirectoryInfo(Environment.CurrentDirectory);
+    do
         {
-            if (System.IO.File.Exists(Path.Combine(current.FullName, "Feuerzeug.sln")))
+        if (System.IO.File.Exists(Path.Combine(current.FullName, "Feuerzeug.sln")))
             {
-                return Path.Combine(
-                    current.FullName,
-                    "Feuerzeug Service",
-                    "bin",
-                    "Debug",
-                    "net8.0-windows",
-                    "Feuerzeug Service.exe"
-                );
-            }
-            current = current.Parent;
+            return Path.Combine(
+                current.FullName,
+                "Feuerzeug Service",
+                "bin",
+                "Debug",
+                "net8.0-windows",
+                "Feuerzeug Service.exe"
+        );
         }
-        while (current is not null);
+        current = current.Parent;
+    }
+    while (current is not null);
 
-        return null;
+    return null;
 #else
         return Path.Combine("Service", "Feuerzeug Service.exe");
 #endif
@@ -213,34 +213,4 @@
         await FeuerzeugService.StopAsync();
         this.RenderLater();
     }
-
-    static bool USer_IsRunning()
-    {
-        return Process.GetProcessesByName("USer").Length > 0;
-    }
-
-    async Task USer_Start()
-    {
-        await USer_Stop();
-
-        Utils.Open(Path.Combine("Resources", "USer.exe"), createNoWindow: true);
-
-        await Utils.WaitForAsync(() => USer_IsRunning(), TimeSpan.FromSeconds(10));
-
-        this.RenderLater();
-    }
-
-    async Task USer_Stop()
-    {
-        foreach (var process in Process.GetProcessesByName("USer"))
-        {
-            process.Kill();
-            process.WaitForExit();
-        }
-
-        await Utils.WaitForAsync(() => !USer_IsRunning(), TimeSpan.FromSeconds(10));
-
-        this.RenderLater();
-    }
-
 }

@@ -10,9 +10,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.0.0.9</Version>
+    <Version>0.0.1.1</Version>
     <ScpTarget>root@steinalt.online:/mnt/docker/var/lib/docker/workspace/stacks/web/www/download/feuerzeug/</ScpTarget>
-    <ScpPort>12223</ScpPort>
+    <ScpPort>224</ScpPort>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -34,7 +34,6 @@
 
   <ItemGroup>
     <None Remove=".gitignore" />
-    <None Remove="Service.cs.bak" />
   </ItemGroup>
 
   <ItemGroup>
@@ -58,6 +57,7 @@
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.91" />
+    <PackageReference Include="Nifly" Version="0.1.0" />
   </ItemGroup>
 
   <ItemGroup>

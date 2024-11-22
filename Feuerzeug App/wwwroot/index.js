@@ -9,8 +9,10 @@ addEventListener(`resize`, e =>
         )
 })
 
-addEventListener(`mousedown`, e =>
+addEventListener(`mousedown`, async e =>
 {
+    await DotNet.invokeMethodAsync(`Feuerzeug App`, `OnMouseDown`, e.button)
+
     const $ = e.target
 
     if ($.classList.contains(`menu-root-item`))

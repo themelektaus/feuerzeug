@@ -369,6 +369,7 @@ public class PowerShellSession : IDisposable
             CT.None
         );
     }
+
     public Task<Result> RunScriptAsync(
         string scriptText,
         Script.Options scriptOptions,
@@ -381,6 +382,7 @@ public class PowerShellSession : IDisposable
             options = scriptOptions
         }, ct);
     }
+
     public async Task<List<PSObject>> GetObjectListAsync(Script script)
     {
         return (await RunScriptAsync(script)).returnValue;

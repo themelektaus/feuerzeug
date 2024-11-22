@@ -10,7 +10,7 @@
     <Body>
         <x-fill />
         <div class="table fixed">
-            <InputSearch @bind-value="searchText" />
+            <InputSearch onSearch="OnSearch" />
             <div class="table-section table-section-header">
                 <div>
                     <div></div>
@@ -61,6 +61,7 @@
 }
 
 <style>
+
     .table.fixed .table-section > div {
         grid-template-columns: 2.5rem 2fr 3fr 1fr 1fr 2.5rem;
     }
@@ -93,6 +94,11 @@
     Service service;
 
     string searchText = string.Empty;
+
+    void OnSearch(string value)
+    {
+        searchText = value;
+    }
 
     bool IsEnabled_Start(Service service)
     {

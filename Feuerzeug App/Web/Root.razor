@@ -8,10 +8,10 @@
             <Button onClickAsync="App.Instance.PerformUpdate">Update</Button>
         </div>
     }
-    @if (page is not null)
+    @if (Page is not null)
     {
-        <div data-page="@(page.Name.Substring(5))">
-            <DynamicComponent Type="page" @ref="pageComponent" />
+        <div data-page="@(Page.Name.Substring(5))">
+            <DynamicComponent Type="Page" @ref="pageComponent" />
         </div>
     }
 </div>
@@ -82,7 +82,7 @@
     Action<object> selectionDialogOnSubmit;
     Dialog selectionDialog;
 
-    Type page = typeof(Page_Index);
+    public Type Page { get; private set; } = typeof(Page_Index);
 
     DynamicComponent pageComponent;
 
@@ -118,7 +118,7 @@
 
     public async Task GotoAsync(Type page)
     {
-        this.page = page;
+        Page = page;
 
         await this.RenderLaterAsync();
     }
@@ -166,4 +166,14 @@
         selectionDialog.Show();
     }
 
+    public static event Func<int, Task> MouseDown;
+
+    [JSInvokable]
+    public static async Task OnMouseDown(int button)
+    {
+        if (MouseDown is not null)
+        {
+            await MouseDown(button);
+        }
+    }
 }
