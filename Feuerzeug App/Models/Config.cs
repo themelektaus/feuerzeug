@@ -7,7 +7,7 @@ namespace Feuerzeug.Models;
 
 public class Config
 {
-    static readonly Size defaultWindowSize = new(930, 790);
+    static readonly Size defaultWindowSize = new(1320, 860);
 
     static readonly string PATH = Path.Combine("data", "config.json");
 

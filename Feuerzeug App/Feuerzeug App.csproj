@@ -16,7 +16,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <Target Name="PostPublish" AfterTargets="Publish">
+  <Target Name="PostPublish" AfterTargets="Publish2">
     <Message Text="----------------------------------------------------------------------" Importance="high" />
     <Exec Command="%22Build\Feuerzeug App.exe%22 publish $(Version) $(ScpTarget) $(ScpPort)" />
   </Target>
@@ -56,7 +56,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.21" />
     <PackageReference Include="Nifly" Version="0.1.0" />
   </ItemGroup>
 

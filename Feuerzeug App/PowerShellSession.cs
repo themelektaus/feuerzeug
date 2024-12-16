@@ -443,6 +443,7 @@ public class PowerShellSession : IDisposable
 
         var scriptContents
             = $"${nameof(scriptBlock)} = {scriptBlock}\r\n"
+            + $"Import-Module \"{Environment.CurrentDirectory}\\Microsoft.Management.Infrastructure.CimCmdlets.dll\"\r\n"
             + $"Invoke-Command {args}{suffix}";
 
         Result result;
