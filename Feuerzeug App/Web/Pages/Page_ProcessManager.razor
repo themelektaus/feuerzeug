@@ -1,0 +1,213 @@
+﻿@inherits PageWithSession
+
+<AssistantPage icon="img/gear.svg"
+               isLoading="!isInitialized"
+               previousPage="typeof(Page_Index)">
+    <Title>
+        Process Manager
+        <span>@session?.ToMarkupString()</span>
+    </Title>
+    <Body>
+        <x-fill />
+        <div class="table fixed">
+            <InputSearch onSearch="OnSearch" />
+            <div class="table-section table-section-header">
+                <div>
+                    <div>Name</div>
+                    <div>CPU</div>
+                    <div></div>
+                </div>
+            </div>
+            <div class="table-section table-section-content">
+                @foreach (var process in GetProcesses())
+                {
+                    <div class="process">
+                        <div>@process.Name</div>
+                        <div>@(process.Cpu == 0 ? "" : (process.Cpu < .01f ? 1 : Math.Round(process.Cpu * 100)) + " %")</div>
+                        <div>
+                            <Button onClick="() => { this.process = process; this.RenderLater(); }"
+                                    styleClass="icon icon-edit"></Button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </Body>
+</AssistantPage>
+
+@if (process is not null)
+{
+    <ProcessDetails process="process"
+                    onStop="StopProcess"
+                    onClose="() => { process = null; this.RenderLater(); }" />
+}
+
+<style>
+
+    .table.fixed .table-section > div {
+        grid-template-columns: 2fr 1fr 2.5rem;
+    }
+
+    .table div:has(> button) {
+        display: flex;
+    }
+
+    .table button.icon {
+        background-position: center;
+        background-size: 1.075em;
+        background-repeat: no-repeat;
+        width: 1.75em;
+        height: 1.75em;
+        padding: 0;
+    }
+
+    .table button.icon-edit { background-image: url(img/edit.svg); }
+    .table div + div > button { background-color: #fff0; }
+    .table div + div > button:hover { background-color: var(--bg-color__alpha-1); }
+    .table div + div > button:active { background-color: var(--bg-color__alpha-2); }
+
+</style>
+
+@implements IAsyncDisposable
+
+@code {
+
+    readonly System.Threading.SemaphoreSlim processesLock = new(1, 1);
+
+    List<Process> processes;
+    List<Process.Usage> processUsages;
+
+    Process process;
+    Task updateTask;
+    bool disposing;
+
+    string searchText = string.Empty;
+
+    void OnSearch(string value)
+    {
+        searchText = value;
+    }
+
+    List<Process> GetProcesses()
+    {
+        processesLock.Wait();
+
+        if (processes is null || !searchText.IsValidPattern(out var ignoreCase))
+        {
+            processesLock.Release();
+            return [];
+        }
+
+        var result = processes.Where(x =>
+        {
+            if (x.Name.SearchMatch(searchText, ignoreCase))
+                return true;
+
+            return false;
+        })
+        .OrderByDescending(x => x.Cpu)
+        .ThenBy(x => x.Name)
+        .ToList();
+
+        processesLock.Release();
+
+        return result;
+    }
+
+    protected override async Task OnInitAsync()
+    {
+        await base.OnInitAsync();
+
+        updateTask = Task.Run(async () =>
+        {
+            while (!disposing)
+            {
+                await UpdateProcesses();
+                await this.RenderLaterAsync();
+                await Task.Delay(500);
+            }
+            updateTask = null;
+        });
+
+        this.RenderLater();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        disposing = true;
+        await Utils.WaitForAsync(() => updateTask is null);
+    }
+
+    async Task UpdateProcesses()
+    {
+        var _processes = await session.RunScriptAsync(
+            "Get-Process | Select-Object Id, Name",
+            new() { logging = false }
+        );
+
+        var _processUsages = await session.RunScriptAsync(
+            "Get-CimInstance"
+            + " -ClassName Win32_PerfFormattedData_PerfProc_Process"
+            + " -filter 'PercentProcessorTime > 0'"
+            + " | Sort PercentProcessorTime -desc"
+            + " | Select-Object IDProcess, Name, PercentProcessorTime",
+            new() { logging = false }
+        );
+
+        await processesLock.WaitAsync();
+
+        processes = new();
+        processUsages = new();
+
+        foreach (var x in _processUsages.returnValue)
+        {
+            try
+            {
+                processUsages.Add(Process.Usage.From(x));
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception(ex);
+            }
+        }
+
+        foreach (var x in _processes.returnValue)
+        {
+            try
+            {
+                processes.Add(Process.From(x));
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception(ex);
+            }
+        }
+
+        var total = processUsages.FirstOrDefault(x => x.Id == 0 && x.Name == "_Total");
+        
+        if (total is not null)
+        {
+            foreach (var processUsage in processUsages)
+            {
+                var process = processes.FirstOrDefault(x => x.Id == processUsage.Id);
+                if (process is not null)
+                {
+                    process.Cpu = (float) processUsage.Value / total.Value;
+                }
+            }
+        }
+
+        processesLock.Release();
+    }
+
+    async Task StopProcess()
+    {
+        var script = new PowerShellSession.Script
+        {
+            text = $"Stop-Process -Id {process.Id}"
+        };
+
+        await session.RunScriptAsync(script);
+    }
+
+}

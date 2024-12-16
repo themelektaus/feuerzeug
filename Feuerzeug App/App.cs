@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -197,7 +196,7 @@ public class App : IDisposable
 
     public static bool USer_IsRunning()
     {
-        return Process.GetProcessesByName("USer").Length > 0;
+        return System.Diagnostics.Process.GetProcessesByName("USer").Length > 0;
     }
 
     public static async Task USer_Start()
@@ -216,7 +215,7 @@ public class App : IDisposable
 
     public static async Task USer_Stop()
     {
-        foreach (var process in Process.GetProcessesByName("USer"))
+        foreach (var process in System.Diagnostics.Process.GetProcessesByName("USer"))
         {
             process.Kill();
             process.WaitForExit();
@@ -229,5 +228,4 @@ public class App : IDisposable
             Root.Instance.Refresh();
         }
     }
-
 }

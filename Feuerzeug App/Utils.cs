@@ -18,7 +18,7 @@ public static class Utils
 
     public static void StartAsAdmin(string fileName, bool createNoWindow)
     {
-        Process.Start(new ProcessStartInfo
+        System.Diagnostics.Process.Start(new ProcessStartInfo
         {
             FileName = fileName,
             UseShellExecute = true,
@@ -32,7 +32,7 @@ public static class Utils
 
     public static void Open(string fileName, string arguments = null, bool createNoWindow = false)
     {
-        var process = new Process()
+        var process = new System.Diagnostics.Process()
         {
             StartInfo = new(fileName, arguments)
             {

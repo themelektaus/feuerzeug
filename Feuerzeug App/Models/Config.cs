@@ -11,7 +11,7 @@ public class Config
 
     static readonly string PATH = Path.Combine("data", "config.json");
 
-    public string downloadUrl = "https://steinalt.online/download/feuerzeug";
+    public string downloadUrl = "https://nockal.com/download/feuerzeug";
 
     public Config_RemoteMachine remoteMachine = new();
 
@@ -26,7 +26,13 @@ public class Config
             return new();
 
         var json = File.ReadAllText(PATH);
-        return json.FromJson<Config>();
+        var config = json.FromJson<Config>();
+
+        config.downloadUrl = config.downloadUrl
+            .Replace("chvaco.at", "nockal.com")
+            .Replace("steinalt.online", "nockal.com");
+
+        return config;
     }
 
     public void Save()

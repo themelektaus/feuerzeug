@@ -351,6 +351,7 @@ public class PowerShellSession : IDisposable
 
         public struct Options
         {
+            public bool? logging;
             public object[] sensitiveArgs;
             public object[] argumentList;
             public enum OutputMode { Default, Json }
@@ -402,7 +403,10 @@ public class PowerShellSession : IDisposable
     {
         var scriptText = script.text;
 
-        Logger.Script(scriptText);
+        if (script.options.logging ?? true)
+        {
+            Logger.Script(scriptText);
+        }
 
         if (script.options.sensitiveArgs?.Length > 0)
         {

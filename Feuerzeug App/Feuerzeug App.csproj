@@ -10,9 +10,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.0.1.1</Version>
-    <ScpTarget>root@steinalt.online:/mnt/docker/var/lib/docker/workspace/stacks/web/www/download/feuerzeug/</ScpTarget>
-    <ScpPort>224</ScpPort>
+    <Version>0.0.1.2</Version>
+    <ScpTarget>root@nockal.com:/var/lib/docker/workspace/stacks/web/html/download/feuerzeug/</ScpTarget>
+    <ScpPort>22</ScpPort>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 

@@ -1,6 +1,5 @@
 ﻿#if RELEASE
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -111,7 +110,10 @@ public partial class Update
 
         foreach (var file in new[] { "data.zip", "version.txt" })
         {
-            Process.Start("scp", $"-P {scpPort} \"{Path.GetFullPath(file)}\" {scpTarget}").WaitForExit();
+            System.Diagnostics.Process
+                .Start("scp", $"-P {scpPort} \"{Path.GetFullPath(file)}\" {scpTarget}")
+                .WaitForExit();
+
             DeleteFile(file);
         }
     }
