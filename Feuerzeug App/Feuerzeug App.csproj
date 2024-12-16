@@ -16,7 +16,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <Target Name="PostPublish" AfterTargets="Publish2">
+  <Target Name="PostPublish" AfterTargets="Publish">
     <Message Text="----------------------------------------------------------------------" Importance="high" />
     <Exec Command="%22Build\Feuerzeug App.exe%22 publish $(Version) $(ScpTarget) $(ScpPort)" />
   </Target>
